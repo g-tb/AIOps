@@ -76,6 +76,11 @@ kubectl port-forward svc/elasticsearch "${ES_LOCAL_PORT}:9200" -n pharmago &
 echo $! >> "$PID_FILE"
 echo "  Elasticsearch: http://127.0.0.1:${ES_LOCAL_PORT}"
 
+# Jaeger
+kubectl port-forward svc/jaeger 16686:16686 -n pharmago &
+echo $! >> "$PID_FILE"
+echo "  Jaeger:       http://127.0.0.1:16686"
+
 echo ""
 echo "Port-forwards activos. Para detener: ./port-forward.sh --stop"
 echo ""
