@@ -10,6 +10,7 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Exporter;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHealthChecks();
 
 builder.Services.AddMemoryCache();
 
@@ -104,6 +105,7 @@ else if (rateLimitMode.Equals("User", StringComparison.OrdinalIgnoreCase))
 
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
 app.MapReverseProxy();
 app.MapPrometheusScrapingEndpoint();
 

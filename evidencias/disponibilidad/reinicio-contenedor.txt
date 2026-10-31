@@ -1,0 +1,4 @@
+NAME                                         READY   STATUS    RESTARTS     AGE
+pharmago-pharmacy-service-55cd7cfc54-4wkcj   0/1     Running   1 (5s ago)   6m53s
+pharmago-pharmacy-service-55cd7cfc54-4wkcj   0/1     Running   1 (23s ago)   7m11s
+pharmago-pharmacy-service-55cd7cfc54-4wkcj   1/1     Running   1 (23s ago)   7m11s

@@ -1,0 +1,11 @@
+Events:
+  Type     Reason     Age                 From               Message
+  ----     ------     ----                ----               -------
+  Normal   Scheduled  3m7s                default-scheduler  Successfully assigned pharmago/pharmago-pharmacy-service-7c97dbf94d-7w7jh to minikube
+  Warning  Unhealthy  66s (x3 over 76s)   kubelet            spec.containers{pharmago-pharmacy-service}: Liveness probe failed: Get "http://10.244.0.22:80/health": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+  Normal   Killing    66s                 kubelet            spec.containers{pharmago-pharmacy-service}: Container pharmago-pharmacy-service failed liveness probe, will be restarted
+  Normal   Pulled     61s (x2 over 3m6s)  kubelet            spec.containers{pharmago-pharmacy-service}: Container image "pharmago-pharmacy-service:latest" already present on machine and can be accessed by the pod
+  Normal   Created    61s (x2 over 3m6s)  kubelet            spec.containers{pharmago-pharmacy-service}: Container created
+  Warning  Unhealthy  61s (x10 over 78s)  kubelet            spec.containers{pharmago-pharmacy-service}: Readiness probe failed: Get "http://10.244.0.22:80/health": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+  Normal   Started    60s (x2 over 3m6s)  kubelet            spec.containers{pharmago-pharmacy-service}: Container started
+  Warning  Unhealthy  60s                 kubelet            spec.containers{pharmago-pharmacy-service}: Readiness probe failed: Get "http://10.244.0.22:80/health": dial tcp 10.244.0.22:80: connect: connection refused
