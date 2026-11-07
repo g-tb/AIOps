@@ -1,0 +1,8 @@
+2026-10-31T03:16:56Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   1/1   Running   0     83s
+2026-10-31T03:17:23Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   0/1   Running   0     110s
+2026-10-31T03:17:40Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   0/1   Running   1 (1s ago)   2m7s
+2026-10-31T03:17:41Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   1/1   Running   1 (2s ago)   2m8s
+2026-10-31T03:17:41Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   1/1   Running   1 (2s ago)   2m8s
+2026-10-31T03:17:41Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   0/1   Running   1 (2s ago)   2m8s
+2026-10-31T03:17:45Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   0/1   Running   1 (6s ago)   2m12s
+2026-10-31T03:17:45Z pharmago-pharmacy-service-7c97dbf94d-7w7jh   1/1   Running   1 (6s ago)   2m12s
