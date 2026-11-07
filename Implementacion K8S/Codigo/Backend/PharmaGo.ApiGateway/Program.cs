@@ -6,6 +6,8 @@ using PharmaGo.ApiGateway.Middleware;
 using Instrumentation;
 using InstrumentationInterface;
 using Yarp.ReverseProxy.Transforms;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Exporter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,10 +44,22 @@ builder.Services.AddReverseProxy()
 builder.Services.AddSingleton<ICustomMetrics, CustomMetrics>();
 
 builder.Services.AddOpenTelemetry()
-    .WithMetrics(metricsBuilder => 
+    .WithTracing(tracing => tracing
+        .SetResourceBuilder(
+            ResourceBuilder.CreateDefault().AddService("PharmaGo.ApiGateway"))
+        .SetSampler(new ParentBasedSampler(new AlwaysOnSampler()))
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri("http://otlp-collector:4317");
+            options.Protocol = OtlpExportProtocol.Grpc;
+        }))
+    .WithMetrics(metricsBuilder =>
     {
         metricsBuilder
-            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("PharmaGo.ApiGateway"))
+            .SetResourceBuilder(
+                ResourceBuilder.CreateDefault().AddService("PharmaGo.ApiGateway"))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddMeter("PharmaGo.CustomMetrics")

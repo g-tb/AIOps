@@ -153,6 +153,10 @@ echo "9. Desplegando frontend..."
 kubectl apply -f services/frontend/ui-service.yaml
 kubectl apply -f deployments/frontend/ui-deployment.yaml
 
+echo "Desplegando Jaeger..."
+kubectl apply -f jaeger.yaml
+kubectl rollout status deployment/jaeger -n pharmago --timeout=180s
+
 echo ""
 echo "=== Despliegue completado ==="
 echo ""

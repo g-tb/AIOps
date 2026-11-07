@@ -57,3 +57,4 @@ k8s/.port-forward.pids
 # === Docker ===
 .docker/
 docker-compose.override.yml
+.port-forward.pids
