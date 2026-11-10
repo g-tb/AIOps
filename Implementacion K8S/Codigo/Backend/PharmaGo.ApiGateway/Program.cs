@@ -47,7 +47,9 @@ builder.Services.AddSingleton<ICustomMetrics, CustomMetrics>();
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
         .SetResourceBuilder(
-            ResourceBuilder.CreateDefault().AddService("PharmaGo.ApiGateway"))
+            ResourceBuilder.CreateDefault().AddService(
+                serviceName: "PharmaGo.ApiGateway",
+                serviceInstanceId: Environment.MachineName))
         .SetSampler(new ParentBasedSampler(new AlwaysOnSampler()))
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
@@ -60,11 +62,18 @@ builder.Services.AddOpenTelemetry()
     {
         metricsBuilder
             .SetResourceBuilder(
-                ResourceBuilder.CreateDefault().AddService("PharmaGo.ApiGateway"))
+            ResourceBuilder.CreateDefault().AddService(
+                serviceName: "PharmaGo.ApiGateway",
+                serviceInstanceId: Environment.MachineName))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddMeter("PharmaGo.CustomMetrics")
-            .AddPrometheusExporter();
+            .AddPrometheusExporter()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otlp-collector:4317");
+                options.Protocol = OtlpExportProtocol.Grpc;
+            });
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -85,7 +94,7 @@ var app = builder.Build();
 
 app.Use(async (context, next) =>
 {
-    context.Response.Headers["X-App-Version"] = "deploy-v2";
+    context.Response.Headers["X-App-Version"] = "deploy-v3";
     await next();
 });
 

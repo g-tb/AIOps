@@ -58,7 +58,7 @@ try {
     Write-Host "  - pharmago-api-gateway..." -ForegroundColor Cyan
     docker build -f PharmaGo.ApiGateway/Dockerfile `
         -t pharmago-api-gateway:latest `
-        -t pharmago-api-gateway:deploy-v2 .
+        -t pharmago-api-gateway:deploy-v3 .
     if ($LASTEXITCODE -ne 0) {
         throw "Error construyendo pharmago-api-gateway."
     }
@@ -68,9 +68,9 @@ try {
         throw "Error cargando pharmago-api-gateway:latest en Minikube."
     }
 
-    minikube image load pharmago-api-gateway:deploy-v2
+    minikube image load pharmago-api-gateway:deploy-v3
     if ($LASTEXITCODE -ne 0) {
-        throw "Error cargando pharmago-api-gateway:deploy-v2 en Minikube."
+        throw "Error cargando pharmago-api-gateway:deploy-v3 en Minikube."
     }
 
     Write-Host "`nConstruyendo imagen de frontend..." `
