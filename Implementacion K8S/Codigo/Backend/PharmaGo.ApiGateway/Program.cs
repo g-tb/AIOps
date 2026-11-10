@@ -83,6 +83,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-App-Version"] = "deploy-v2";
+    await next();
+});
+
 app.UseCors("MyAllowedOrigins");
 app.UseGatewayCorrelationId();
 
