@@ -42,10 +42,10 @@ minikube image load pharmago-pharmacy-service:latest
 echo "  - pharmago-api-gateway..."
 docker build -f PharmaGo.ApiGateway/Dockerfile \
     -t pharmago-api-gateway:latest \
-    -t pharmago-api-gateway:deploy-v3 .
+    -t pharmago-api-gateway:deploy-v4 .
 
 minikube image load pharmago-api-gateway:latest
-minikube image load pharmago-api-gateway:deploy-v3
+minikube image load pharmago-api-gateway:deploy-v4
 
 echo ""
 echo "Construyendo imagen de frontend..."

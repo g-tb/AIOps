@@ -29,7 +29,7 @@ spec:
                 values: [backend, all]
       containers:
       - name: pharmago-api-gateway
-        image: pharmago-api-gateway:deploy-v3
+        image: pharmago-api-gateway:deploy-v4
         imagePullPolicy: Never
         ports:
         - containerPort: 80
