@@ -15,5 +15,13 @@ spec:
     targetPort: 8889
     protocol: TCP
     name: prometheus
+  - port: 4319
+    targetPort: 4319
+    protocol: TCP
+    name: otlp-infra
+  - port: 8890
+    targetPort: 8890
+    protocol: TCP
+    name: prom-infra
   type: ClusterIP
 

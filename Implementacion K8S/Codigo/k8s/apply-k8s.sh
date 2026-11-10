@@ -41,6 +41,7 @@ echo ""
 echo "4. Creando configmaps..."
 kubectl apply -f configmaps/prometheus-config.yaml
 kubectl apply -f configmaps/otel-collector-config.yaml
+kubectl apply -f configmaps/infra-collector-config.yaml
 kubectl apply -f configmaps/grafana-provisioning.yaml
 kubectl apply -f configmaps/grafana-alert-rules.yaml
 kubectl apply -f configmaps/grafana-dashboards.yaml
@@ -125,6 +126,7 @@ kubectl apply -f services/ops/prometheus-service.yaml
 kubectl apply -f deployments/ops/prometheus-deployment.yaml
 kubectl apply -f services/ops/node-exporter-service.yaml
 kubectl apply -f deployments/ops/node-exporter-daemonset.yaml
+kubectl apply -f deployments/ops/infra-collector-deployment.yaml
 
 kubectl apply -f services/ops/grafana-service.yaml
 kubectl apply -f deployments/ops/grafana-deployment.yaml

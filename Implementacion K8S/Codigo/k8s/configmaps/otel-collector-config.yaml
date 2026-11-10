@@ -11,13 +11,23 @@ data:
           grpc:
             endpoint: "0.0.0.0:4317"
 
+      otlp/infra:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4319"
+
     processors:
       batch: {}
 
     exporters:
       prometheus:
         endpoint: "0.0.0.0:8889"
+
+      prometheus/infra:
+        endpoint: "0.0.0.0:8890"
+
       debug: {}
+
       otlp/jaeger:
         endpoint: "jaeger:4317"
         tls:
@@ -28,6 +38,12 @@ data:
         metrics:
           receivers: [otlp]
           exporters: [prometheus, debug]
+
+        metrics/infra:
+          receivers: [otlp/infra]
+          processors: [batch]
+          exporters: [prometheus/infra]
+
         traces:
           receivers: [otlp]
           processors: [batch]
