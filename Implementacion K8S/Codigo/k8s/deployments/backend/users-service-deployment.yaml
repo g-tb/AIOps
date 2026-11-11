@@ -5,6 +5,12 @@ metadata:
   namespace: pharmago
 spec:
   replicas: 2
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: pharmago-users-service
@@ -54,7 +60,6 @@ spec:
           periodSeconds: 2
           timeoutSeconds: 1
           failureThreshold: 60
-
         readinessProbe:
           httpGet:
             path: /health
@@ -62,7 +67,6 @@ spec:
           periodSeconds: 2
           timeoutSeconds: 1
           failureThreshold: 1
-
         livenessProbe:
           httpGet:
             path: /health
@@ -71,4 +75,3 @@ spec:
           timeoutSeconds: 1
           failureThreshold: 3
           terminationGracePeriodSeconds: 5
-
