@@ -46,6 +46,7 @@ Write-Host "`n4. Creando configmaps..." -ForegroundColor Yellow
 kubectl apply -f configmaps\prometheus-config.yaml
 kubectl apply -f configmaps\otel-collector-config.yaml
 kubectl apply -f configmaps\grafana-provisioning.yaml
+kubectl apply -f configmaps/grafana-alert-rules.yaml
 kubectl apply -f configmaps\grafana-dashboards.yaml
 kubectl apply -f configmaps\grafana-dashboard-infra.yaml
 kubectl apply -f configmaps\fluent-bit-config.yaml
@@ -161,4 +162,3 @@ Write-Host "  Frontend:     minikube service pharmago-ui -n pharmago --url" -For
 Write-Host "  Grafana:      minikube service grafana -n pharmago --url" -ForegroundColor White
 Write-Host "  Kibana:       minikube service kibana -n pharmago --url" -ForegroundColor White
 Write-Host "  Prometheus:   minikube service prometheus -n pharmago --url" -ForegroundColor White
-
