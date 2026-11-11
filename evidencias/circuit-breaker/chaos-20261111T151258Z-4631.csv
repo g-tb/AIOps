@@ -1,0 +1,13 @@
+timestamp_utc,phase,pod,path,status,seconds,circuit_state,correlation_id
+2026-11-11T15:13:03Z,baseline,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,200,1.567633,closed,cb-20261111T151258Z-4631-1
+2026-11-11T15:13:04Z,baseline-independent,pharmago-users-service-5f6547666c-4zgvt,/api/roles/ping,200,0.033140,n/a,cb-20261111T151258Z-4631-2
+2026-11-11T15:13:18Z,outage-1,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,6.989245,closed,cb-20261111T151258Z-4631-3
+2026-11-11T15:13:22Z,outage-2,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,1.565432,open,cb-20261111T151258Z-4631-4
+2026-11-11T15:13:25Z,outage-3,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,0.024598,open,cb-20261111T151258Z-4631-5
+2026-11-11T15:13:28Z,outage-4,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,0.022724,open,cb-20261111T151258Z-4631-6
+2026-11-11T15:13:31Z,outage-5,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,0.033863,open,cb-20261111T151258Z-4631-7
+2026-11-11T15:13:34Z,outage-6,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,0.024519,open,cb-20261111T151258Z-4631-8
+2026-11-11T15:13:37Z,outage-7,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,0.027305,open,cb-20261111T151258Z-4631-9
+2026-11-11T15:13:40Z,outage-8,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,503,0.021231,open,cb-20261111T151258Z-4631-10
+2026-11-11T15:13:43Z,cluster-isolation,pharmago-users-service-5f6547666c-4zgvt,/api/roles/ping,200,0.025796,n/a,cb-20261111T151258Z-4631-11
+2026-11-11T15:13:55Z,recovery-1,pharmago-users-service-5f6547666c-4zgvt,/api/roles/pharmacy-status,200,0.039503,closed,cb-20261111T151258Z-4631-12
