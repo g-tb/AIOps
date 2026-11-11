@@ -47,6 +47,15 @@ spec:
         app: infra-collector
     spec:
       serviceAccountName: infra-collector
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: ops
+        effect: NoSchedule
+      - key: dedicated
+        operator: Equal
+        value: pharmago
+        effect: PreferNoSchedule
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

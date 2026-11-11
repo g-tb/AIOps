@@ -13,6 +13,15 @@ spec:
       labels:
         app: otlp-collector
     spec:
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: ops
+        effect: NoSchedule
+      - key: dedicated
+        operator: Equal
+        value: pharmago
+        effect: PreferNoSchedule
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
