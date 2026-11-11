@@ -11,6 +11,9 @@ cd k8s
 # 3. Desplegar
 ./apply-k8s.sh
 
+# 4. Rollout del circuit-breaker (solo si tienen pod desactualizado)
+kubectl rollout restart deployment/pharmago-users-service deployment/pharmago-pharmacy-service deployment/pharmago-api-gateway deployment/pharmago-ui -n pharmago
+
 # 4. Port-forward (Windows: usar 127.0.0.1)
 ./port-forward.sh
 ```
