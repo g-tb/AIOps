@@ -13,6 +13,15 @@ spec:
       labels:
         app: pharmago-ui
     spec:
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: frontend
+        effect: NoSchedule
+      - key: dedicated
+        operator: Equal
+        value: pharmago
+        effect: PreferNoSchedule
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
