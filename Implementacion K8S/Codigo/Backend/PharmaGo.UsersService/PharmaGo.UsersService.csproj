@@ -23,5 +23,10 @@
     <ProjectReference Include="..\PharmaGo.UsersService.IBusinessLogic\PharmaGo.UsersService.IBusinessLogic.csproj" />
   </ItemGroup>
 
+  <!-- The Factory links these sources for typed HttpClient registration.
+       Compile each client only once so DI uses the same runtime type. -->
+  <ItemGroup>
+    <Compile Remove="HttpClients\**\*.cs" />
+  </ItemGroup>
 </Project>
 

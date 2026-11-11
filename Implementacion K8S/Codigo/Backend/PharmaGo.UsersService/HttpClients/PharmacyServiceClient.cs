@@ -19,7 +19,7 @@ namespace PharmaGo.UsersService.HttpClients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"/api/pharmacy/{id}");
+                using var response = await _httpClient.GetAsync($"/api/pharmacy/{id}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -38,6 +38,12 @@ namespace PharmaGo.UsersService.HttpClients
                 _logger.LogError(ex, $"Error calling PharmacyService to get pharmacy {id}");
                 return null;
             }
+        }
+        public async Task<bool> PingAsync(CancellationToken cancellationToken = default)
+        {
+            // Do not swallow exceptions: the controller distinguishes an open circuit.
+            using var response = await _httpClient.GetAsync("/health", cancellationToken);
+            return response.IsSuccessStatusCode;
         }
     }
 }
