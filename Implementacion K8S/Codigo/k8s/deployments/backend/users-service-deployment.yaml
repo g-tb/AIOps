@@ -19,6 +19,15 @@ spec:
       labels:
         app: pharmago-users-service
     spec:
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: users
+        effect: NoSchedule
+      - key: dedicated
+        operator: Equal
+        value: pharmago
+        effect: PreferNoSchedule
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -26,7 +35,7 @@ spec:
             - matchExpressions:
               - key: node-type
                 operator: In
-                values: [backend, all]
+                values: [users, all]
       containers:
       - name: pharmago-users-service
         image: pharmago-users-service:latest
