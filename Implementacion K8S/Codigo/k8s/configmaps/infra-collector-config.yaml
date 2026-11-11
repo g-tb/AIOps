@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infra-collector-config
+  namespace: pharmago
+data:
+  config.yaml: |
+    receivers:
+      prometheus:
+        config:
+          global:
+            scrape_interval: 5s
+            scrape_timeout: 4s
+
+          scrape_configs:
+            - job_name: node-exporter
+              static_configs:
+                - targets: ["node-exporter:9100"]
+
+            - job_name: kubernetes-cadvisor
+              kubernetes_sd_configs:
+                - role: node
+              scheme: https
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              relabel_configs:
+                - action: labelmap
+                  regex: __meta_kubernetes_node_label_(.+)
+                - target_label: __address__
+                  replacement: kubernetes.default.svc:443
+                - source_labels: [__meta_kubernetes_node_name]
+                  regex: (.+)
+                  target_label: __metrics_path__
+                  replacement: /api/v1/nodes/$${1}/proxy/metrics/cadvisor
+                - source_labels: [__meta_kubernetes_node_name]
+                  target_label: node
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 192
+        spike_limit_mib: 48
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+
+    exporters:
+      otlp:
+        endpoint: otlp-collector:4319
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: [memory_limiter, batch]
+          exporters: [otlp]

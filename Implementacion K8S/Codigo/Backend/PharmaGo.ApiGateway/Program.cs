@@ -94,7 +94,7 @@ var app = builder.Build();
 
 app.Use(async (context, next) =>
 {
-    context.Response.Headers["X-App-Version"] = "deploy-v3";
+    context.Response.Headers["X-App-Version"] = "deploy-v4";
     await next();
 });
 

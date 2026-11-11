@@ -45,6 +45,7 @@ if ($LASTEXITCODE -ne 0) { exit 1 }
 Write-Host "`n4. Creando configmaps..." -ForegroundColor Yellow
 kubectl apply -f configmaps\prometheus-config.yaml
 kubectl apply -f configmaps\otel-collector-config.yaml
+kubectl apply -f configmaps/infra-collector-config.yaml
 kubectl apply -f configmaps\grafana-provisioning.yaml
 kubectl apply -f configmaps/grafana-alert-rules.yaml
 kubectl apply -f configmaps\grafana-dashboards.yaml
@@ -56,9 +57,16 @@ Write-Host "`n5. Creando StorageClass y PersistentVolumes..." -ForegroundColor Y
 kubectl apply -f persistent-volumes\storage-class.yaml
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
-# Eliminar PVs existentes en estado Released para recrearlos
-Write-Host "   Limpiando PVs existentes..." -ForegroundColor Cyan
-kubectl delete pv sql-pv elasticsearch-pv prometheus-pv grafana-pv --ignore-not-found=true
+# Limpiar solo PVs huerfanos; conservar los que siguen vinculados a un PVC.
+Write-Host "   Limpiando PVs huerfanos..." -ForegroundColor Cyan
+foreach ($pvName in @('sql-pv', 'elasticsearch-pv', 'prometheus-pv', 'grafana-pv')) {
+    $pvPhase = kubectl get pv $pvName --ignore-not-found=true -o jsonpath='{.status.phase}'
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    if ($pvPhase -in @('Released', 'Failed')) {
+        kubectl delete pv $pvName --ignore-not-found=true
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+    }
+}
 Start-Sleep -Seconds 2
 
 kubectl apply -f persistent-volumes\sql-pv.yaml
@@ -126,6 +134,7 @@ kubectl apply -f services\ops\prometheus-service.yaml
 kubectl apply -f deployments\ops\prometheus-deployment.yaml
 kubectl apply -f services\ops\node-exporter-service.yaml
 kubectl apply -f deployments\ops\node-exporter-daemonset.yaml
+kubectl apply -f deployments/ops/infra-collector-deployment.yaml
 
 kubectl apply -f services\ops\grafana-service.yaml
 kubectl apply -f deployments\ops\grafana-deployment.yaml

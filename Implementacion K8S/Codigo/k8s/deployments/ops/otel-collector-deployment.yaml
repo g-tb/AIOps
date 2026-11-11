@@ -29,8 +29,12 @@ spec:
           name: otlp-grpc
         - containerPort: 8889
           name: prometheus
+        - containerPort: 4319
+          name: otlp-infra
+        - containerPort: 8890
+          name: prom-infra
         args:
-          - "--config=/etc/otel-collector-config.yaml"
+        - "--config=/etc/otel-collector-config.yaml"
         volumeMounts:
         - name: otel-config
           mountPath: /etc/otel-collector-config.yaml
@@ -39,4 +43,3 @@ spec:
       - name: otel-config
         configMap:
           name: otel-collector-config
-
