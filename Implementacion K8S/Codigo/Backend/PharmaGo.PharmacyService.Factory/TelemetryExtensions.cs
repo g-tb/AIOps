@@ -28,7 +28,6 @@ namespace PharmaGo.PharmacyService.Factory
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddMeter("PharmaGo.CustomMetrics")
-                    .AddPrometheusExporter()
                     .AddOtlpExporter(options =>
                         {
                             options.Endpoint = new Uri("http://otlp-collector:4317");
