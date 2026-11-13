@@ -301,6 +301,218 @@ data:
                 summary: Prometheus no pudo consultar las métricas del Collector OTLP durante 30 segundos.
               labels: {}
               isPaused: false
+            - uid: pharmago-http-5xx
+              title: Errores 5xx en un servicio
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: "sum by (exported_job) (\n  (pharmago_http_requests_total{\n    job=\"otlp-collector\",\n    status_code=~\"5..\"\n  } unless pharmago_http_requests_total{\n    job=\"otlp-collector\",\n    status_code=~\"5..\"\n  } offset 2m)\n  or increase(pharmago_http_requests_total{\n    job=\"otlp-collector\",\n    status_code=~\"5..\"\n  }[2m])\n) or vector(0)"
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 5
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 30s
+              annotations:
+                summary: Un servicio respondió más de 5 errores 5xx en 2 minutos, durante 30 segundos. Cuenta también los primeros errores después de un reinicio.
+              labels: {}
+              isPaused: false
+            - uid: pharmago-pod-cpu
+              title: CPU del pod cerca de su límite
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: "100 * max by (pod) (\n  rate(container_cpu_usage_seconds_total{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}[2m])\n  / on (pod, container) (container_spec_cpu_quota{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n  * on (pod, container) container_spec_cpu_period{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}\n)"
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 70
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 1m
+              annotations:
+                summary: Un pod usa más del 70 % de su límite de CPU durante un minuto.
+              labels: {}
+              isPaused: false
+            - uid: pharmago-pod-memory
+              title: Memoria del pod cerca de su límite
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: "100 * max by (pod) (\n  container_memory_working_set_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}\n  / on (pod, container) (container_spec_memory_limit_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n)"
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 85
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 1m
+              annotations:
+                summary: Un pod usa más del 85 % de su límite de memoria durante un minuto.
+              labels: {}
+              isPaused: false
+            - uid: pharmago-container-restart
+              title: Contenedor reiniciado o reemplazado
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: "count by (pod) (\n  time() - container_start_time_seconds{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} < 120\n) or vector(0)"
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 0
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 0s
+              annotations:
+                summary: "Un contenedor de pharmago arrancó hace menos de 2 minutos: se reinició, se reemplazó su pod o hubo un rollout."
+              labels: {}
+              isPaused: false
 kind: ConfigMap
 metadata:
   name: grafana-alert-rules
