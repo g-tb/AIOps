@@ -206,7 +206,7 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "sum(\r\n  rate(pharmago_http_requests_total{\r\n    job=\"otlp-collector\",\r\n    exported_job=\"PharmaGo.ApiGateway\",\r\n    status_code=\"429\"\r\n  }[2m])\r\n) or vector(0)"
+                    expr: "sum(\n  (pharmago_http_requests_total{\n    job=\"otlp-collector\",\n    exported_job=\"PharmaGo.ApiGateway\",\n    status_code=\"429\"\n  } unless pharmago_http_requests_total{\n    job=\"otlp-collector\",\n    exported_job=\"PharmaGo.ApiGateway\",\n    status_code=\"429\"\n  } offset 2m)\n  or increase(pharmago_http_requests_total{\n    job=\"otlp-collector\",\n    exported_job=\"PharmaGo.ApiGateway\",\n    status_code=\"429\"\n  }[2m])\n) or vector(0)"
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -222,7 +222,7 @@ data:
                     conditions:
                         - evaluator:
                             params:
-                                - 0.1
+                                - 12
                             type: gt
                           operator:
                             type: and
@@ -245,7 +245,7 @@ data:
               execErrState: Error
               for: 30s
               annotations:
-                summary: El Gateway registra más de 0,1 rechazos HTTP 429 por segundo durante 30 segundos.
+                summary: El Gateway registra más de 12 rechazos HTTP 429 en 2 minutos, durante 30 segundos. Cuenta también la primera ráfaga después de un reinicio.
               labels: {}
               isPaused: false
             - uid: bg3u6aoxqfgn4c
