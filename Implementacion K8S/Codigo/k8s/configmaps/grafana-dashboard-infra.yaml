@@ -643,7 +643,7 @@ data:
     \                                                      \"sort\":  \"none\"\r\n
     \                                                  }\r\n                                   },\r\n
     \                      \"targets\":  [\r\n                                       {\r\n
-    \                                          \"expr\":  \"sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\\\"pharmago\\\"}[5m]))
+    \                                          \"expr\":  \"sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\\\"pharmago\\\", container!=\\\"\\\", container!=\\\"POD\\\"}[5m]))
     * 100\",\r\n                                           \"legendFormat\":  \"{{pod}}\",\r\n
     \                                          \"refId\":  \"A\"\r\n                                       }\r\n
     \                                  ],\r\n                       \"title\":  \"CPU
@@ -720,7 +720,7 @@ data:
     \                                                      \"sort\":  \"none\"\r\n
     \                                                  }\r\n                                   },\r\n
     \                      \"targets\":  [\r\n                                       {\r\n
-    \                                          \"expr\":  \"sum by (pod) (container_memory_working_set_bytes{namespace=\\\"pharmago\\\"})\",\r\n
+    \                                          \"expr\":  \"sum by (pod) (container_memory_working_set_bytes{namespace=\\\"pharmago\\\", container!=\\\"\\\", container!=\\\"POD\\\"})\",\r\n
     \                                          \"legendFormat\":  \"{{pod}}\",\r\n
     \                                          \"refId\":  \"A\"\r\n                                       }\r\n
     \                                  ],\r\n                       \"title\":  \"Memoria
