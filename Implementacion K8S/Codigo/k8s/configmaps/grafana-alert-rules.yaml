@@ -365,7 +365,7 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "100 * max by (pod) (\n  rate(container_cpu_usage_seconds_total{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}[1m])\n  / on (pod, container) (container_spec_cpu_quota{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n  * on (pod, container) container_spec_cpu_period{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}\n)"
+                    expr: "100 * max by (pod) (\n  sum by (pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}[1m]))\n  / on (pod, container) max by (pod, container) (container_spec_cpu_quota{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n  * on (pod, container) max by (pod, container) (container_spec_cpu_period{namespace=\"pharmago\", container!=\"\", container!=\"POD\"})\n)"
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -418,7 +418,7 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "100 * max by (pod) (\n  container_memory_working_set_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}\n  / on (pod, container) (container_spec_memory_limit_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n)"
+                    expr: "100 * max by (pod) (\n  max by (pod, container) (container_memory_working_set_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"})\n  / on (pod, container) max by (pod, container) (container_spec_memory_limit_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n)"
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
