@@ -513,6 +513,59 @@ data:
                 summary: "Un contenedor de pharmago arrancó hace menos de 2 minutos: se reinició, se reemplazó su pod o hubo un rollout."
               labels: {}
               isPaused: false
+            - uid: pharmago-replicas-unavailable
+              title: Réplicas no disponibles
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: "max by (deployment) (\n  max_over_time((\n    kube_deployment_spec_replicas{namespace=\"pharmago\"}\n    - kube_deployment_status_replicas_available{namespace=\"pharmago\"}\n  )[1m:5s])\n)"
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 0
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 0s
+              annotations:
+                summary: "A un deployment de pharmago le faltan réplicas disponibles: un pod se cayó, no está listo o no pudo arrancar."
+              labels: {}
+              isPaused: false
 kind: ConfigMap
 metadata:
   name: grafana-alert-rules
