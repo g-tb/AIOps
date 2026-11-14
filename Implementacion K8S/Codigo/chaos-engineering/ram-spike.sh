@@ -11,5 +11,10 @@ if [ -z "$POD" ]; then
   exit 1
 fi
 echo "RAM spike: $POD (${MB}MB durante ${SECS}s)"
-kubectl exec -n pharmago "$POD" -- sh -c "(head -c ${MB}M /dev/zero; sleep $SECS) | tail > /dev/null"
-echo "Listo: memoria liberada en $POD"
+if kubectl exec -n pharmago "$POD" -- sh -c "(head -c ${MB}M /dev/zero; sleep $SECS) | tail > /dev/null"; then
+  echo "Listo: memoria liberada en $POD"
+else
+  echo "Atencion: kubectl exec termino con codigo $? (137 = proceso matado, posible OOMKill)."
+  echo "Revisar: kubectl get pod $POD -n pharmago"
+  exit 1
+fi
