@@ -365,7 +365,7 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "100 * max by (pod) (\n  rate(container_cpu_usage_seconds_total{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}[2m])\n  / on (pod, container) (container_spec_cpu_quota{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n  * on (pod, container) container_spec_cpu_period{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}\n)"
+                    expr: "100 * max by (pod) (\n  rate(container_cpu_usage_seconds_total{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}[1m])\n  / on (pod, container) (container_spec_cpu_quota{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n  * on (pod, container) container_spec_cpu_period{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}\n)"
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -402,9 +402,9 @@ data:
                     type: threshold
               noDataState: NoData
               execErrState: Error
-              for: 1m
+              for: 30s
               annotations:
-                summary: Un pod usa más del 70 % de su límite de CPU durante un minuto.
+                summary: Un pod usa más del 70 % de su límite de CPU durante 30 segundos.
               labels: {}
               isPaused: false
             - uid: pharmago-pod-memory
@@ -455,9 +455,9 @@ data:
                     type: threshold
               noDataState: NoData
               execErrState: Error
-              for: 1m
+              for: 30s
               annotations:
-                summary: Un pod usa más del 85 % de su límite de memoria durante un minuto.
+                summary: Un pod usa más del 85 % de su límite de memoria durante 30 segundos.
               labels: {}
               isPaused: false
             - uid: pharmago-container-restart
