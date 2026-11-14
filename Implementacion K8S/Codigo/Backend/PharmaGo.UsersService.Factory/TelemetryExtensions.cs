@@ -1,3 +1,4 @@
+using Instrumentation;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -16,7 +17,7 @@ namespace PharmaGo.UsersService.Factory
     .SetResourceBuilder(
         ResourceBuilder.CreateDefault().AddService(serviceName, serviceInstanceId: Environment.MachineName))
     .SetSampler(new ParentBasedSampler(new AlwaysOnSampler()))
-    .AddAspNetCoreInstrumentation()
+    .AddAspNetCoreInstrumentation(options => options.Filter = TraceFilters.ShouldTraceRequest)
     .AddHttpClientInstrumentation()
     .AddOtlpExporter(options =>
     {
