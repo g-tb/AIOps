@@ -68,7 +68,7 @@ services:
       - pharmago-network
 
   otlp-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.165.0
     container_name: otlp-collector
     ports:
       - "4317:4317"
