@@ -39,7 +39,12 @@ Tiempos de alerta: estado leído de la API de Grafana cada 3 s (reglas evaluadas
    Resultado del script: FAIL. El circuito de users siguió abierto: los half-open de
    t+56, t+88 y t+122 s cortaron por timeout (2 s) sin llegar a pharmacy (sin span de
    servidor en Jaeger). Cerró a t+179 s, con el primer pedido después de que terminara
-   el script. Ver la nota de pendientes sobre ConnectTimeout del cliente de users.
+   el script. Causa: el cliente users -> pharmacy no tenía ConnectTimeout, y un SYN a un
+   pod borrado se reintenta ~127 s (tcp_syn_retries=6).
+   Con ConnectTimeout de 1 s (commit "fix(users): add connect timeout to pharmacy client"),
+   4 corridas más dieron PASS: 17, 17, 16 y 41 s. En la de 41 s el circuito se abrió y se
+   cerró en el primer half-open, a los 30 s. El connect timeout aparece en los logs como
+   "Retry scheduled ... LastError=TaskCanceledException" y responde 503, no 500.
 
 6. Interrupción de red: no hay script (R2). La fila muestra red por pod y 5xx.
 
