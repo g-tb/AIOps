@@ -49,6 +49,11 @@ namespace PharmaGo.UsersService.Controllers
             {
                 return StatusCode(503, new { status = "error", pharmacyService = "timeout" });
             }
+            catch (OperationCanceledException exception) when (exception.InnerException is TimeoutException)
+            {
+                // ConnectTimeout of the pharmacy client, after the retries.
+                return StatusCode(503, new { status = "error", pharmacyService = "timeout" });
+            }
             catch (HttpRequestException)
             {
                 return StatusCode(503, new { status = "error", pharmacyService = "unreachable" });
