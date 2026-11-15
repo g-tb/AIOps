@@ -76,6 +76,9 @@ spec:
         - name: grafana-dashboard-infra
           mountPath: /etc/grafana/provisioning/dashboards/pharmago-infra.json
           subPath: pharmago-infra.json
+        - name: grafana-dashboard-warroom
+          mountPath: /etc/grafana/provisioning/dashboards/pharmago-war-room.json
+          subPath: pharmago-war-room.json
         - name: grafana-alert-rules
           mountPath: /etc/grafana/provisioning/alerting/pharmago-alerts.yaml
           subPath: pharmago-alerts.yaml
@@ -121,6 +124,9 @@ spec:
       - name: grafana-dashboard-infra
         configMap:
           name: grafana-dashboard-infra
+      - name: grafana-dashboard-warroom
+        configMap:
+          name: grafana-dashboard-warroom
       - name: grafana-alert-rules
         configMap:
           name: grafana-alert-rules
