@@ -301,6 +301,179 @@ data:
                 summary: Prometheus no pudo consultar las métricas del Collector OTLP durante 30 segundos.
               labels: {}
               isPaused: false
+        - orgId: 1
+          name: aplicacion
+          folder: PharmaGo
+          interval: 10s
+          rules:
+            - uid: pharmago-high-error-rate
+              title: "Alta tasa de errores de la API"
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: |
+                      (sum(rate(pharmago_http_errors_total{endpoint=~"/api/.*"}[5m])) or vector(0))
+                      / sum(rate(pharmago_http_requests_total{endpoint=~"/api/.*"}[5m])) * 100
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                      - evaluator:
+                          params: [5]
+                          type: gt
+                        operator:
+                          type: and
+                        query:
+                          params: [C]
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                    datasource:
+                      type: __expr__
+                      uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 5m
+              annotations:
+                summary: "Más del 5% de solicitudes API terminan con error durante cinco minutos."
+                description: "Errores 4xx, 5xx y excepciones registrados por el middleware, sobre el total de solicitudes /api/. El numerador vale cero si aún no hay serie de errores. Sin solicitudes no hay porcentaje definido. Se usa solo la vía OTLP de estas métricas; no se suman los exportadores directos."
+              labels:
+                severity: warning
+              isPaused: false
+            - uid: pharmago-high-latency
+              title: "Latencia P95 elevada de la API"
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: |
+                      histogram_quantile(0.95,
+                        sum by (le, exported_job) (
+                          rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*"}[5m])
+                        )
+                      )
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                      - evaluator:
+                          params: [1000]
+                          type: gt
+                        operator:
+                          type: and
+                        query:
+                          params: [C]
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                    datasource:
+                      type: __expr__
+                      uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 5m
+              annotations:
+                summary: "P95 de la API superior a un segundo durante cinco minutos."
+                description: "Se evalúa por servicio. Los histogramas están en milisegundos: 1000 ms equivale a un segundo. Solo rutas /api/. Sin tráfico la latencia puede no estar definida."
+              labels:
+                severity: warning
+              isPaused: false
+            - uid: pharmago-service-down
+              title: "Servicio de aplicación inaccesible"
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: |
+                      up{job=~"users-service|pharmacy-service|api-gateway"}
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                      - evaluator:
+                          params: [0.5]
+                          type: lt
+                        operator:
+                          type: and
+                        query:
+                          params: [C]
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                    datasource:
+                      type: __expr__
+                      uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 1m
+              annotations:
+                summary: "Prometheus no puede consultar un servicio de aplicación durante un minuto."
+                description: "Una instancia de alerta por destino: Users, Pharmacy y Gateway. up=0 indica fallo del scraping; up=1 solo confirma que /metrics responde, no que todas las funcionalidades o réplicas estén sanas."
+              labels:
+                severity: critical
+              isPaused: false
+
 kind: ConfigMap
 metadata:
   name: grafana-alert-rules
