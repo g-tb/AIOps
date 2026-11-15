@@ -9,6 +9,11 @@ data:
       scrape_interval: 5s
 
     scrape_configs:
+      # Métricas del propio Prometheus, requeridas por los dashboards importados.
+      - job_name: prometheus
+        static_configs:
+          - targets: ["prometheus:9090"]
+
       - job_name: otlp-collector
         metrics_path: /metrics
         static_configs:
