@@ -577,7 +577,7 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "count by (pod) (\n  kube_pod_status_phase{namespace=\"pharmago\", phase=~\"Failed|Succeeded\"} == 1\n) or vector(0)"
+                    expr: "count by (pod) (\n  kube_pod_status_phase{namespace=\"pharmago\", phase=~\"Failed|Succeeded\"} == 1\n  and on (pod) kube_pod_owner{namespace=\"pharmago\", owner_kind=~\"ReplicaSet|DaemonSet\"}\n) or vector(0)"
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -616,7 +616,7 @@ data:
               execErrState: Error
               for: 0s
               annotations:
-                summary: "Un pod de pharmago terminó y no se reinicia (fase Failed o Succeeded), por ejemplo desalojado por pasar su límite de ephemeral-storage. Sigue así hasta borrarlo con kubectl delete pod --field-selector=status.phase!=Running,status.phase!=Pending -n pharmago."
+                summary: "Un pod de un Deployment o DaemonSet de pharmago terminó y no se reinicia (fase Failed o Succeeded), por ejemplo desalojado por pasar su límite de ephemeral-storage. Sigue así hasta borrarlo con kubectl delete pod --field-selector=status.phase!=Running,status.phase!=Pending -n pharmago."
               labels: {}
               isPaused: false
 kind: ConfigMap

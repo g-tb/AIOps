@@ -1309,7 +1309,7 @@ data:
               },
               "refId": "A",
               "editorMode": "code",
-              "expr": "count by (pod) (\n  kube_pod_status_phase{namespace=\"pharmago\", phase=~\"Failed|Succeeded\"} == 1\n) or vector(0)",
+              "expr": "count by (pod) (\n  kube_pod_status_phase{namespace=\"pharmago\", phase=~\"Failed|Succeeded\"} == 1\n  and on (pod) kube_pod_owner{namespace=\"pharmago\", owner_kind=~\"ReplicaSet|DaemonSet\"}\n) or vector(0)",
               "legendFormat": "{{pod}}",
               "range": true,
               "instant": false
