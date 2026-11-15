@@ -58,9 +58,12 @@ spec:
           requests:
             memory: "128Mi"
             cpu: "100m"
+            ephemeral-storage: "64Mi"
           limits:
             memory: "384Mi"
             cpu: "500m"
+            # Above this the kubelet evicts the pod and the Deployment replaces it (D-28).
+            ephemeral-storage: "256Mi"
         startupProbe:
           httpGet:
             path: /health
