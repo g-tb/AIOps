@@ -47,6 +47,11 @@ kubectl apply -f configmaps/grafana-alert-rules.yaml
 kubectl apply -f configmaps/grafana-dashboards.yaml
 kubectl apply -f configmaps/grafana-dashboard-infra.yaml
 kubectl apply -f configmaps/grafana-dashboard-warroom.yaml
+kubectl create configmap grafana-dashboards-guide -n pharmago \
+  --from-file=../grafana/provisioning/dashboards/pharmago-grafana-guide.json \
+  --from-file=../grafana/provisioning/dashboards/node-exporter-full_rev46.json \
+  --from-file=../grafana/provisioning/dashboards/prometheus-2-0-overview_rev2.json \
+  --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts --field-manager=pharmago-dashboards -f -
 kubectl apply -f configmaps/fluent-bit-config.yaml
 
 echo ""

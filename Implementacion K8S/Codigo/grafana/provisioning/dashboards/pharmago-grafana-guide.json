@@ -1,0 +1,538 @@
+{
+  "id": null,
+  "uid": "pharmago-grafana-guide",
+  "title": "PharmaGo - Extended Summary",
+  "description": "Fórmulas de la sección Queries útiles para Dashboards de tutoriales/como-usar-grafana.md que no repiten el Overview ni el War room. Los percentiles agregan por servicio y miran solo /api, como la alerta de latencia.",
+  "version": 3,
+  "schemaVersion": 38,
+  "editable": true,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "tags": [
+    "pharmago",
+    "infra",
+    "microservicios",
+    "negocio"
+  ],
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "Overview original",
+      "url": "/d/pharmago-overview",
+      "keepTime": true
+    },
+    {
+      "type": "link",
+      "title": "Infra original",
+      "url": "/d/pharmago-infra",
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "current": {
+          "text": "Prometheus",
+          "value": "prometheus"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Métricas de Peticiones",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "title": "Total de peticiones",
+      "type": "stat",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Peticiones. No se agregaron filtros ni se modificó la fórmula. Acumulado de los contadores presentes, no incremento del período ni total histórico persistente. La sugerencia del editor de usar rate() cambiaría lo que mide esta tarjeta.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(pharmago_http_requests_total)",
+          "legendFormat": "Total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Distribución por método HTTP",
+      "type": "timeseries",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Peticiones. No se agregaron filtros ni se modificó la fórmula.",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (method) (rate(pharmago_http_requests_total[5m]))",
+          "legendFormat": "{{method}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Métricas de Latencia",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 9,
+      "title": "Latencia P50",
+      "type": "timeseries",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Latencia. No se agregaron filtros ni se modificó la fórmula. Se conservan las series por sus etiquetas originales, sin agregar entre instancias; los percentiles no son un único percentil global. Unidad: milisegundos.",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le, exported_job) (rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~\"/api/.*\"}[5m])))",
+          "legendFormat": "{{exported_job}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Latencia P95",
+      "type": "timeseries",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Latencia. No se agregaron filtros ni se modificó la fórmula. Se conservan las series por sus etiquetas originales, sin agregar entre instancias; los percentiles no son un único percentil global. Unidad: milisegundos.",
+      "gridPos": {
+        "x": 8,
+        "y": 11,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, exported_job) (rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~\"/api/.*\"}[5m])))",
+          "legendFormat": "{{exported_job}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Latencia P99",
+      "type": "timeseries",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Latencia. No se agregaron filtros ni se modificó la fórmula. Se conservan las series por sus etiquetas originales, sin agregar entre instancias; los percentiles no son un único percentil global. Unidad: milisegundos.",
+      "gridPos": {
+        "x": 16,
+        "y": 11,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le, exported_job) (rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~\"/api/.*\"}[5m])))",
+          "legendFormat": "{{exported_job}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Métricas de Errores",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 15,
+      "title": "Errores por segundo",
+      "type": "timeseries",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Errores. No se agregaron filtros ni se modificó la fórmula.",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(pharmago_http_errors_total[5m]))",
+          "legendFormat": "Total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "title": "Métricas de Disponibilidad",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 19,
+      "title": "Availability (% de peticiones exitosas)",
+      "type": "timeseries",
+      "description": "Consulta literal de como-usar-grafana.md, sección Métricas de Disponibilidad. No se agregaron filtros ni se modificó la fórmula. Porcentaje de respuestas 2xx sobre todas las solicitudes; incluye chequeos automáticos. No mide disponibilidad desde el usuario.",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(pharmago_http_requests_total{status_code=~\"2..\"}[5m])) / sum(rate(pharmago_http_requests_total[5m])) * 100",
+          "legendFormat": "Total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "interval": "5s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "noValue": "Sin datos",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
-# kube-state-metrics: estado de pods y deployments del namespace pharmago.
+# kube-state-metrics: estado de pods, deployments y endpoints del namespace pharmago.
+# Endpoints (no EndpointSlices): su label "endpoint" ya es el nombre del Service.
 # No lo scrapea Prometheus: lo scrapea el infra-collector y llega por OTLP.
 apiVersion: v1
 kind: ServiceAccount
@@ -17,6 +18,9 @@ rules:
   verbs: ["list", "watch"]
 - apiGroups: ["apps"]
   resources: ["deployments"]
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources: ["endpoints"]
   verbs: ["list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -71,7 +75,7 @@ spec:
         image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.20.0
         args:
         - "--namespaces=pharmago"
-        - "--resources=pods,deployments"
+        - "--resources=pods,deployments,endpoints"
         ports:
         - name: http-metrics
           containerPort: 8080

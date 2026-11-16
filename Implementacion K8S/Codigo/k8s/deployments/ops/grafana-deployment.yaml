@@ -76,6 +76,18 @@ spec:
         - name: grafana-dashboard-infra
           mountPath: /etc/grafana/provisioning/dashboards/pharmago-infra.json
           subPath: pharmago-infra.json
+        - name: grafana-dashboards-guide
+          mountPath: /etc/grafana/provisioning/dashboards/pharmago-grafana-guide.json
+          subPath: pharmago-grafana-guide.json
+          readOnly: true
+        - name: grafana-dashboards-guide
+          mountPath: /etc/grafana/provisioning/dashboards/node-exporter-full_rev46.json
+          subPath: node-exporter-full_rev46.json
+          readOnly: true
+        - name: grafana-dashboards-guide
+          mountPath: /etc/grafana/provisioning/dashboards/prometheus-2-0-overview_rev2.json
+          subPath: prometheus-2-0-overview_rev2.json
+          readOnly: true
         - name: grafana-dashboard-warroom
           mountPath: /etc/grafana/provisioning/dashboards/pharmago-war-room.json
           subPath: pharmago-war-room.json
@@ -124,6 +136,9 @@ spec:
       - name: grafana-dashboard-infra
         configMap:
           name: grafana-dashboard-infra
+      - name: grafana-dashboards-guide
+        configMap:
+          name: grafana-dashboards-guide
       - name: grafana-dashboard-warroom
         configMap:
           name: grafana-dashboard-warroom

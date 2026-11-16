@@ -220,8 +220,8 @@ data:
             "uid": "prometheus"
           },
           "gridPos": {
-            "h": 3,
-            "w": 8,
+            "h": 4,
+            "w": 4,
             "x": 16,
             "y": 1
           },
@@ -275,6 +275,79 @@ data:
         },
         {
           "type": "stat",
+          "id": 29,
+          "title": "Disponibilidad del gateway",
+          "description": "% de requests /api del gateway sin 5xx en 1 min (100 sin tráfico). Los 404 y 429 cuentan como disponibles: son el sistema defendiéndose.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 20,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "100 * (1 - (\n  (sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", endpoint=~\"/api/.*\", status_code=~\"5..\"}[1m])) or vector(0))\n  / (sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", endpoint=~\"/api/.*\"}[1m])) > 0)\n)) or vector(100)",
+              "legendFormat": "",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 95
+                  },
+                  {
+                    "color": "green",
+                    "value": 99
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 1,
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          }
+        },
+        {
+          "type": "stat",
           "id": 5,
           "title": "5xx/s en los servicios",
           "description": "Respuestas 5xx de los 3 servicios, en 1 min.",
@@ -283,10 +356,10 @@ data:
             "uid": "prometheus"
           },
           "gridPos": {
-            "h": 3,
-            "w": 8,
+            "h": 5,
+            "w": 4,
             "x": 16,
-            "y": 4
+            "y": 5
           },
           "targets": [
             {
@@ -350,10 +423,10 @@ data:
             "uid": "prometheus"
           },
           "gridPos": {
-            "h": 3,
-            "w": 8,
-            "x": 16,
-            "y": 7
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 5
           },
           "targets": [
             {
@@ -414,7 +487,7 @@ data:
         {
           "type": "row",
           "id": 7,
-          "title": "Inyección de requests (load-requests.sh)",
+          "title": "Inyección de requests (load-requests.sh, rate-limiting.sh, errores-api.sh)",
           "collapsed": false,
           "gridPos": {
             "h": 1,
@@ -435,7 +508,7 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 8,
             "x": 0,
             "y": 11
           },
@@ -508,8 +581,8 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 12,
+            "w": 8,
+            "x": 8,
             "y": 11
           },
           "targets": [
@@ -571,15 +644,174 @@ data:
           }
         },
         {
+          "type": "timeseries",
+          "id": 30,
+          "title": "4xx sin 429 en 2 min por servicio (alerta > 20)",
+          "description": "Misma expresión que la alerta 'Errores 4xx en un servicio'. Solo /api; el 429 tiene su panel.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 11
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum by (exported_job) (\n  (pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"4..\", status_code!=\"429\", endpoint=~\"/api/.*\"}\n    unless last_over_time(pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"4..\", status_code!=\"429\", endpoint=~\"/api/.*\"}[10m] offset 2m))\n  or increase(pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"4..\", status_code!=\"429\", endpoint=~\"/api/.*\"}[2m])\n) or vector(0)",
+              "legendFormat": "{{exported_job}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 20
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
           "type": "row",
-          "id": 10,
-          "title": "Sobrecarga de CPU (cpu-spike.sh)",
+          "id": 31,
+          "title": "Latencia (latencia-api.sh)",
           "collapsed": false,
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
             "y": 19
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 32,
+          "title": "Latencia p95 por servicio en /api (alerta > 1000 ms)",
+          "description": "P95 en 2 min por servicio, solo /api. La alerta 'Latencia P95 elevada de la API' exige además al menos 3 requests de más de 1 s en esos 2 min, para ignorar una request lenta aislada. Sin tráfico no hay valor.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 20
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum by (le, exported_job) (rate(pharmago_http_request_duration_milliseconds_bucket{job=\"otlp-collector\", endpoint=~\"/api/.*\"}[2m])))",
+              "legendFormat": "{{exported_job}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1000
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "row",
+          "id": 10,
+          "title": "Sobrecarga de CPU (cpu-spike.sh, cpu-elevada.sh)",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 28
           },
           "panels": []
         },
@@ -594,9 +826,9 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
+            "w": 12,
             "x": 0,
-            "y": 20
+            "y": 29
           },
           "targets": [
             {
@@ -657,15 +889,90 @@ data:
           }
         },
         {
+          "type": "timeseries",
+          "id": 33,
+          "title": "CPU del nodo en % de la cuota de minikube (alerta > 85)",
+          "description": "Misma expresión que la alerta 'CPU elevada del nodo': cAdvisor del cgroup raíz del nodo sobre la cuota --cpus.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 29
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "100 * max(rate(container_cpu_usage_seconds_total{job=\"kubernetes-cadvisor\", id=\"/\"}[2m]))\n/ (\n  (max(container_spec_cpu_quota{job=\"kubernetes-cadvisor\", id=\"/\"})\n    / max(container_spec_cpu_period{job=\"kubernetes-cadvisor\", id=\"/\"}))\n  or max(machine_cpu_cores{job=\"kubernetes-cadvisor\"})\n)",
+              "legendFormat": "Nodo",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 85
+                  }
+                ]
+              },
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
           "type": "row",
           "id": 12,
-          "title": "Sobrecarga de memoria (ram-spike.sh)",
+          "title": "Sobrecarga de memoria (ram-spike.sh, memoria-elevada.sh)",
           "collapsed": false,
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 28
+            "y": 37
           },
           "panels": []
         },
@@ -680,9 +987,9 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 16,
+            "w": 8,
             "x": 0,
-            "y": 29
+            "y": 38
           },
           "targets": [
             {
@@ -743,6 +1050,81 @@ data:
           }
         },
         {
+          "type": "timeseries",
+          "id": 34,
+          "title": "Memoria del nodo en % del límite de minikube (alerta > 85)",
+          "description": "Misma expresión que la alerta 'Memoria elevada del nodo': working set del cgroup raíz del nodo sobre su límite --memory (node_cgroup_memory_max_bytes).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 38
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "100 * max(container_memory_working_set_bytes{job=\"kubernetes-cadvisor\", id=\"/\"})\n/ (\n  max(node_cgroup_memory_max_bytes{job=\"node-exporter\"})\n  or max(machine_memory_bytes{job=\"kubernetes-cadvisor\"})\n)",
+              "legendFormat": "Nodo",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 85
+                  }
+                ]
+              },
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
           "type": "table",
           "id": 14,
           "title": "Última terminación por contenedor",
@@ -755,7 +1137,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 29
+            "y": 38
           },
           "targets": [
             {
@@ -841,13 +1223,13 @@ data:
         {
           "type": "row",
           "id": 15,
-          "title": "Sobrecarga de storage (volume-spike.sh)",
+          "title": "Sobrecarga de storage (volume-spike.sh, disco-bajo.sh)",
           "collapsed": false,
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 37
+            "y": 46
           },
           "panels": []
         },
@@ -864,7 +1246,7 @@ data:
             "h": 8,
             "w": 16,
             "x": 0,
-            "y": 38
+            "y": 47
           },
           "targets": [
             {
@@ -937,7 +1319,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 38
+            "y": 47
           },
           "targets": [
             {
@@ -1008,7 +1390,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 46
+            "y": 55
           },
           "panels": []
         },
@@ -1025,7 +1407,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 47
+            "y": 56
           },
           "targets": [
             {
@@ -1082,7 +1464,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 47
+            "y": 56
           },
           "targets": [
             {
@@ -1139,7 +1521,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 47
+            "y": 56
           },
           "targets": [
             {
@@ -1202,13 +1584,13 @@ data:
         {
           "type": "row",
           "id": 22,
-          "title": "Desconexión de componentes (circuit-breaker.sh, kubectl delete pod)",
+          "title": "Desconexión de componentes (circuit-breaker.sh, servicio-inaccesible.sh, collector-inaccesible.sh, kubectl delete pod)",
           "collapsed": false,
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 55
+            "y": 64
           },
           "panels": []
         },
@@ -1223,9 +1605,9 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 8,
+            "w": 6,
             "x": 0,
-            "y": 56
+            "y": 65
           },
           "targets": [
             {
@@ -1235,7 +1617,7 @@ data:
               },
               "refId": "A",
               "editorMode": "code",
-              "expr": "count by (pod) (\n  time() - container_start_time_seconds{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} < 120\n) or vector(0)",
+              "expr": "count by (pod) (\n  time() - container_start_time_seconds{namespace=\"pharmago\", container!=\"\", container!=\"POD\", pod!~\"caos-alerta-.*\"} < 120\n) or vector(0)",
               "legendFormat": "{{pod}}",
               "range": true,
               "instant": false
@@ -1297,9 +1679,9 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 8,
-            "x": 8,
-            "y": 56
+            "w": 6,
+            "x": 6,
+            "y": 65
           },
           "targets": [
             {
@@ -1361,6 +1743,81 @@ data:
           }
         },
         {
+          "type": "timeseries",
+          "id": 35,
+          "title": "Endpoints listos por Service (alerta con 0)",
+          "description": "Direcciones listas de cada Service (kube-state-metrics). La alerta 'Servicio de la app sin endpoints listos' salta con 0 durante 30 s.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 65
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "count by (endpoint) (kube_endpoint_address{namespace=\"pharmago\", ready=\"true\", endpoint=~\"pharmago-(users-service|pharmacy-service|api-gateway)\"})\nor sum by (endpoint) (kube_endpoint_info{namespace=\"pharmago\", endpoint=~\"pharmago-(users-service|pharmacy-service|api-gateway)\"}) * 0",
+              "legendFormat": "{{endpoint}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "min": 0,
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
           "type": "stat",
           "id": 25,
           "title": "Scrapes de Prometheus (up)",
@@ -1371,9 +1828,9 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 8,
-            "x": 16,
-            "y": 56
+            "w": 6,
+            "x": 18,
+            "y": 65
           },
           "targets": [
             {
@@ -1449,7 +1906,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 64
+            "y": 73
           },
           "panels": []
         },
@@ -1466,7 +1923,7 @@ data:
             "h": 10,
             "w": 18,
             "x": 0,
-            "y": 65
+            "y": 74
           },
           "targets": [
             {
@@ -1505,7 +1962,7 @@ data:
             "h": 10,
             "w": 6,
             "x": 18,
-            "y": 65
+            "y": 74
           },
           "options": {
             "mode": "markdown",

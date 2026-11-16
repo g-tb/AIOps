@@ -18,6 +18,48 @@ spec:
       hostPID: true
       tolerations:
         - operator: Exists
+      # Publishes the node's real memory limit (the minikube container's cgroup), which
+      # /proc/meminfo does not show: MemTotal is the VM's or host's memory. Only when it is
+      # lower than MemTotal (cgroup v2 "max" or the v1 "unlimited" value are skipped).
+      initContainers:
+        - name: cgroup-memory-limit
+          image: prom/node-exporter:v1.7.0
+          command:
+            - sh
+            - -c
+            - |
+              limite=$(cat /host/sys/fs/cgroup/memory.max 2>/dev/null ||
+                cat /host/sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo max)
+              total=$(awk '/^MemTotal:/ {printf "%.0f", $2 * 1024}' /host/proc/meminfo)
+              case $limite in
+                ''|*[!0-9]*) echo "Sin limite de memoria en el cgroup del nodo: se usa MemTotal." ;;
+                *)
+                  if awk -v l="$limite" -v t="$total" 'BEGIN {exit !(l < t)}'; then
+                    {
+                      echo '# HELP node_cgroup_memory_max_bytes Memory limit of the node root cgroup (minikube container).'
+                      echo '# TYPE node_cgroup_memory_max_bytes gauge'
+                      echo "node_cgroup_memory_max_bytes $limite"
+                    } > /textfile/cgroup-memory.prom
+                    echo "Limite de memoria del nodo: $limite bytes (MemTotal: $total)."
+                  else
+                    echo "El limite del cgroup no es menor que MemTotal: se usa MemTotal."
+                  fi ;;
+              esac
+          volumeMounts:
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: textfile
+              mountPath: /textfile
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
       containers:
         - name: node-exporter
           image: prom/node-exporter:v1.7.0
@@ -27,6 +69,7 @@ spec:
             - --path.procfs=/host/proc
             - --no-collector.wifi
             - --no-collector.hwmon
+            - --collector.textfile.directory=/textfile
           ports:
             - containerPort: 9100
           volumeMounts:
@@ -36,8 +79,14 @@ spec:
             - name: root
               mountPath: /host/root
               readOnly: true
+              # Mounts made on the node later (disco-bajo.sh) show up here, and their
+              # unmount too: no restart, and no copy of the mount left behind.
+              mountPropagation: HostToContainer
             - name: proc
               mountPath: /host/proc
+              readOnly: true
+            - name: textfile
+              mountPath: /textfile
               readOnly: true
           resources:
             requests:
@@ -55,3 +104,5 @@ spec:
         - name: proc
           hostPath:
             path: /proc
+        - name: textfile
+          emptyDir: {}
