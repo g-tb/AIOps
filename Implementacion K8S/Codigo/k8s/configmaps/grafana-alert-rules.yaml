@@ -625,7 +625,7 @@ data:
           interval: 10s
           rules:
             - uid: pharmago-high-error-rate
-              title: "Alta tasa de errores de la API"
+              title: "Errores 4xx en un servicio"
               condition: C
               data:
                 - refId: A
@@ -636,8 +636,11 @@ data:
                   model:
                     editorMode: code
                     expr: |
-                      (sum(rate(pharmago_http_errors_total{endpoint=~"/api/.*"}[5m])) or vector(0))
-                      / sum(rate(pharmago_http_requests_total{endpoint=~"/api/.*"}[5m])) * 100
+                      sum by (exported_job) (
+                        (pharmago_http_requests_total{job="otlp-collector", status_code=~"4..", status_code!="429", endpoint=~"/api/.*"}
+                          unless last_over_time(pharmago_http_requests_total{job="otlp-collector", status_code=~"4..", status_code!="429", endpoint=~"/api/.*"}[10m] offset 2m))
+                        or increase(pharmago_http_requests_total{job="otlp-collector", status_code=~"4..", status_code!="429", endpoint=~"/api/.*"}[2m])
+                      ) or vector(0)
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -652,7 +655,7 @@ data:
                   model:
                     conditions:
                       - evaluator:
-                          params: [5]
+                          params: [20]
                           type: gt
                         operator:
                           type: and
@@ -672,10 +675,10 @@ data:
                     type: threshold
               noDataState: NoData
               execErrState: Error
-              for: 5m
+              for: 30s
               annotations:
-                summary: "Más del 5% de solicitudes API terminan con error durante cinco minutos."
-                description: "Errores 4xx, 5xx y excepciones registrados por el middleware, sobre el total de solicitudes /api/. El numerador vale cero si aún no hay serie de errores. Sin solicitudes no hay porcentaje definido. Se usa solo la vía OTLP de estas métricas; no se suman los exportadores directos."
+                summary: "Un servicio respondió más de 20 errores 4xx en 2 minutos, durante 30 segundos."
+                description: "Solo rutas /api/. No cuenta el 429 (lo cubre la alerta de rate limiting) ni los 5xx (alerta propia). Cuenta también los primeros errores de una serie nueva, como la alerta de 5xx. El uso normal no llega a 20: son logins fallidos aislados."
               labels:
                 severity: warning
               isPaused: false
@@ -693,9 +696,15 @@ data:
                     expr: |
                       histogram_quantile(0.95,
                         sum by (le, exported_job) (
-                          rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*"}[5m])
+                          rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*"}[2m])
                         )
                       )
+                      and on (exported_job) (
+                        sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_count{endpoint=~"/api/.*"}[2m]))
+                        - sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*", le="1000.0"}[2m]))
+                        >= 3
+                      )
+                      or vector(0)
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -730,15 +739,15 @@ data:
                     type: threshold
               noDataState: NoData
               execErrState: Error
-              for: 5m
+              for: 30s
               annotations:
-                summary: "P95 de la API superior a un segundo durante cinco minutos."
-                description: "Se evalúa por servicio. Los histogramas están en milisegundos: 1000 ms equivale a un segundo. Solo rutas /api/. Sin tráfico la latencia puede no estar definida."
+                summary: "El P95 de la API de un servicio superó un segundo en los últimos 2 minutos, durante 30 segundos."
+                description: "Se evalúa por servicio y solo en rutas /api/. Exige al menos 3 solicitudes de más de un segundo en esos 2 minutos: así no la dispara una solicitud lenta aislada, como el primer login después de un rato sin tráfico. Sin tráfico vale 0."
               labels:
                 severity: warning
               isPaused: false
             - uid: pharmago-service-down
-              title: "Servicio de aplicación inaccesible"
+              title: "Servicio de la app sin endpoints listos"
               condition: C
               data:
                 - refId: A
@@ -749,7 +758,10 @@ data:
                   model:
                     editorMode: code
                     expr: |
-                      up{job=~"users-service|pharmacy-service|api-gateway"}
+                      (
+                        kube_endpoint_info{namespace="pharmago", endpoint=~"pharmago-(users-service|pharmacy-service|api-gateway)"}
+                        unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
+                      ) or vector(0)
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -764,8 +776,8 @@ data:
                   model:
                     conditions:
                       - evaluator:
-                          params: [0.5]
-                          type: lt
+                          params: [0]
+                          type: gt
                         operator:
                           type: and
                         query:
@@ -784,10 +796,10 @@ data:
                     type: threshold
               noDataState: NoData
               execErrState: Error
-              for: 1m
+              for: 30s
               annotations:
-                summary: "Prometheus no puede consultar un servicio de aplicación durante un minuto."
-                description: "Una instancia de alerta por destino: Users, Pharmacy y Gateway. up=0 indica fallo del scraping; up=1 solo confirma que /metrics responde, no que todas las funcionalidades o réplicas estén sanas."
+                summary: "El Service de users, pharmacy o el gateway no tiene ningún endpoint listo durante 30 segundos: no le llega tráfico."
+                description: "Viene de kube-state-metrics (recurso endpoints). Cubre pods caídos o no Ready y un selector del Service que no apunta a ningún pod. En un rollout normal siempre queda una réplica lista."
               labels:
                 severity: critical
               isPaused: false
