@@ -1384,7 +1384,7 @@ data:
         {
           "type": "row",
           "id": 18,
-          "title": "Interrupción de red",
+          "title": "Interrupción de red (network-chaos.sh)",
           "collapsed": false,
           "gridPos": {
             "h": 1,
