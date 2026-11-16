@@ -40,6 +40,14 @@ namespace PharmaGo.UsersService.Factory
                 client.BaseAddress = new Uri(serviceUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
+            // Without a connect timeout, a SYN sent to a deleted pharmacy pod is retried for ~2 min
+            // (tcp_syn_retries=6), and the half-open probes kept timing out after pharmacy had
+            // recovered (D-32). Keep it below AttemptTimeoutSeconds.
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                ConnectTimeout = TimeSpan.FromSeconds(
+                    configuration.GetValue("PharmacyResilience:ConnectTimeoutSeconds", 1))
+            })
             .AddPolicyHandler((services, request) =>
                 (request.Method == HttpMethod.Get || request.Method == HttpMethod.Head)
                     && request.Content == null
@@ -52,6 +60,11 @@ namespace PharmaGo.UsersService.Factory
                 TimeoutStrategy.Optimistic));
         }
 
+        // SocketsHttpHandler reports ConnectTimeout as a cancellation wrapping a TimeoutException,
+        // which HandleTransientHttpError does not cover.
+        public static bool IsConnectTimeout(OperationCanceledException exception) =>
+            exception.InnerException is TimeoutException;
+
         private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(
             IServiceProvider services, IConfiguration configuration)
         {
@@ -61,6 +74,7 @@ namespace PharmaGo.UsersService.Factory
             var baseDelay = configuration.GetValue("PharmacyResilience:BaseDelayMilliseconds", 2000);
             return HttpPolicyExtensions.HandleTransientHttpError()
                 .Or<TimeoutRejectedException>()
+                .Or<OperationCanceledException>(IsConnectTimeout)
                 .WaitAndRetryAsync(retryCount,
                     // Full jitter: 0-2s, 0-4s, 0-8s with the default settings.
                     attempt => TimeSpan.FromMilliseconds(Random.Shared.NextDouble()
@@ -83,6 +97,7 @@ namespace PharmaGo.UsersService.Factory
                 .CreateLogger("PharmaGo.Resilience.PharmacyServiceClient");
             return HttpPolicyExtensions.HandleTransientHttpError()
                 .Or<TimeoutRejectedException>()
+                .Or<OperationCanceledException>(IsConnectTimeout)
                 .CircuitBreakerAsync(
                     configuration.GetValue("PharmacyResilience:FailureThreshold", 5),
                     TimeSpan.FromSeconds(configuration.GetValue("PharmacyResilience:BreakSeconds", 30)),

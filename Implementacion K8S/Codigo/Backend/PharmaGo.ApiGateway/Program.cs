@@ -51,7 +51,7 @@ builder.Services.AddOpenTelemetry()
                 serviceName: "PharmaGo.ApiGateway",
                 serviceInstanceId: Environment.MachineName))
         .SetSampler(new ParentBasedSampler(new AlwaysOnSampler()))
-        .AddAspNetCoreInstrumentation()
+        .AddAspNetCoreInstrumentation(options => options.Filter = TraceFilters.ShouldTraceRequest)
         .AddHttpClientInstrumentation()
         .AddOtlpExporter(options =>
         {

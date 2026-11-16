@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using PharmaGo.UsersService.IBusinessLogic;
 using PharmaGo.UsersService.Models.Out;
 using PharmaGo.UsersService.HttpClients;
+using PharmaGo.UsersService.Factory;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 
@@ -47,6 +48,12 @@ namespace PharmaGo.UsersService.Controllers
             }
             catch (TimeoutRejectedException)
             {
+                return StatusCode(503, new { status = "error", pharmacyService = "timeout" });
+            }
+            catch (OperationCanceledException exception) when (ServiceFactory.IsConnectTimeout(exception))
+            {
+                // ConnectTimeout after the retries, or the overall HttpClient.Timeout: both wrap a
+                // TimeoutException. A client disconnect does not, and is not caught here.
                 return StatusCode(503, new { status = "error", pharmacyService = "timeout" });
             }
             catch (HttpRequestException)

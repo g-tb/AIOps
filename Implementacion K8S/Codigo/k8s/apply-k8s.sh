@@ -46,6 +46,7 @@ kubectl apply -f configmaps/grafana-provisioning.yaml
 kubectl apply -f configmaps/grafana-alert-rules.yaml
 kubectl apply -f configmaps/grafana-dashboards.yaml
 kubectl apply -f configmaps/grafana-dashboard-infra.yaml
+kubectl apply -f configmaps/grafana-dashboard-warroom.yaml
 kubectl apply -f configmaps/fluent-bit-config.yaml
 
 echo ""

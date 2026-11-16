@@ -1,0 +1,1516 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-warroom
+  namespace: pharmago
+data:
+  pharmago-war-room.json: |
+    {
+      "uid": "pharmago-war-room",
+      "title": "PharmaGo - War room",
+      "tags": [
+        "pharmago",
+        "war-room"
+      ],
+      "description": "Una fila por escenario de caos de la rúbrica, con la señal y el umbral de su alerta.",
+      "editable": true,
+      "graphTooltip": 1,
+      "refresh": "5s",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
+      "timezone": "browser",
+      "annotations": {
+        "list": []
+      },
+      "templating": {
+        "list": []
+      },
+      "links": [
+        {
+          "title": "Overview",
+          "type": "link",
+          "url": "/d/pharmago-overview"
+        },
+        {
+          "title": "Infra",
+          "type": "link",
+          "url": "/d/pharmago-infra"
+        }
+      ],
+      "panels": [
+        {
+          "type": "row",
+          "id": 1,
+          "title": "Estado",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "panels": []
+        },
+        {
+          "type": "alertlist",
+          "id": 2,
+          "title": "Alertas activas",
+          "description": "Reglas de Grafana en Pending o Firing (k8s/configmaps/grafana-alert-rules.yaml).",
+          "gridPos": {
+            "h": 9,
+            "w": 9,
+            "x": 0,
+            "y": 1
+          },
+          "options": {
+            "viewMode": "list",
+            "groupMode": "default",
+            "groupBy": [],
+            "maxItems": 20,
+            "sortOrder": 1,
+            "dashboardAlerts": false,
+            "alertName": "",
+            "alertInstanceLabelFilter": "",
+            "stateFilter": {
+              "firing": true,
+              "pending": true,
+              "noData": false,
+              "normal": false,
+              "error": true
+            },
+            "showInstances": true,
+            "datasource": ""
+          }
+        },
+        {
+          "type": "table",
+          "id": 3,
+          "title": "Réplicas por deployment",
+          "description": "Disponibles contra deseadas (kube-state-metrics). 'Faltan' en rojo es la alerta de réplicas no disponibles.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 7,
+            "x": 9,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "max by (deployment) (kube_deployment_spec_replicas{namespace=\"pharmago\"})",
+              "legendFormat": "",
+              "range": false,
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "B",
+              "editorMode": "code",
+              "expr": "max by (deployment) (kube_deployment_status_replicas_available{namespace=\"pharmago\"})",
+              "legendFormat": "",
+              "range": false,
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "C",
+              "editorMode": "code",
+              "expr": "max by (deployment) (kube_deployment_spec_replicas{namespace=\"pharmago\"} - kube_deployment_status_replicas_available{namespace=\"pharmago\"})",
+              "legendFormat": "",
+              "range": false,
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "renameByName": {
+                  "deployment": "Deployment",
+                  "Value #A": "Deseadas",
+                  "Value #B": "Disponibles",
+                  "Value #C": "Faltan"
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Sin datos",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Faltan"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 1
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "id": 4,
+          "title": "Requests/s del gateway",
+          "description": "Todas las respuestas del gateway, en 1 min.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 3,
+            "w": 8,
+            "x": 16,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\"}[1m])) or vector(0)",
+              "legendFormat": "",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 5,
+          "title": "5xx/s en los servicios",
+          "description": "Respuestas 5xx de los 3 servicios, en 1 min.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 3,
+            "w": 8,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"5..\"}[1m])) or vector(0)",
+              "legendFormat": "",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.01
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 6,
+          "title": "Latencia p95 del gateway",
+          "description": "Percentil 95 en 1 min.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 3,
+            "w": 8,
+            "x": 16,
+            "y": 7
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(pharmago_http_request_duration_milliseconds_bucket{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\"}[1m])))",
+              "legendFormat": "",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 500
+                  },
+                  {
+                    "color": "red",
+                    "value": 1000
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          }
+        },
+        {
+          "type": "row",
+          "id": 7,
+          "title": "Inyección de requests (load-requests.sh)",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 10
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 8,
+          "title": "Requests/s del gateway por status code",
+          "description": "El rate limiting del gateway responde 429.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 11
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum by (status_code) (rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\"}[1m]))",
+              "legendFormat": "{{status_code}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "429"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 9,
+          "title": "Rechazos 429 en 2 min (alerta > 12)",
+          "description": "Misma expresión que la alerta 'Rechazos elevados por rate limiting' (D-17).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 11
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum(\n  (pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", status_code=\"429\"}\n    unless last_over_time(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", status_code=\"429\"}[10m] offset 2m))\n  or increase(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", status_code=\"429\"}[2m])\n) or vector(0)",
+              "legendFormat": "429 en 2 min",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 12
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "row",
+          "id": 10,
+          "title": "Sobrecarga de CPU (cpu-spike.sh)",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 19
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 11,
+          "title": "CPU del pod en % de su límite (alerta > 70)",
+          "description": "Misma expresión que la alerta 'CPU del pod cerca de su límite'. Solo pods con límite de CPU.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 20
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "100 * max by (pod) (\n  sum by (pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"pharmago\", container!=\"\", container!=\"POD\"}[1m]))\n  / on (pod, container) max by (pod, container) (container_spec_cpu_quota{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n  * on (pod, container) max by (pod, container) (container_spec_cpu_period{namespace=\"pharmago\", container!=\"\", container!=\"POD\"})\n)",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 70
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "row",
+          "id": 12,
+          "title": "Sobrecarga de memoria (ram-spike.sh)",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 13,
+          "title": "Memoria del pod en % de su límite (alerta > 85)",
+          "description": "Misma expresión que la alerta 'Memoria del pod cerca de su límite'. Al 100 % el kernel mata el contenedor (OOMKilled).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 16,
+            "x": 0,
+            "y": 29
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "100 * max by (pod) (\n  max by (pod, container) (container_memory_working_set_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"})\n  / on (pod, container) max by (pod, container) (container_spec_memory_limit_bytes{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} > 0)\n)",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 85
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "table",
+          "id": 14,
+          "title": "Última terminación por contenedor",
+          "description": "Motivo del último fin de cada contenedor que ya terminó alguna vez (OOMKilled, Error, Completed).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 29
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "max by (pod, container, reason) (kube_pod_container_status_last_terminated_reason{namespace=\"pharmago\"} == 1)",
+              "legendFormat": "",
+              "range": false,
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "pod": "Pod",
+                  "container": "Contenedor",
+                  "reason": "Motivo"
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Ningún contenedor terminó",
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Motivo"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "OOMKilled": {
+                            "color": "red",
+                            "index": 0
+                          },
+                          "Error": {
+                            "color": "orange",
+                            "index": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          }
+        },
+        {
+          "type": "row",
+          "id": 15,
+          "title": "Sobrecarga de storage (volume-spike.sh)",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 37
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 16,
+          "title": "Disco efímero por pod (límite 256Mi)",
+          "description": "k8s_pod_filesystem_usage_bytes del receiver kubeletstats, cada 10 s (D-27). Sobre 256Mi el kubelet desaloja el pod del backend, casi siempre antes de la siguiente muestra: el desalojo se ve en 'Pods terminados' y en la alerta 'Pod desalojado o fallido' (D-28).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 16,
+            "x": 0,
+            "y": 38
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "max by (pod) (k8s_pod_filesystem_usage_bytes{namespace=\"pharmago\"})",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 268435456
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 17,
+          "title": "Disco disponible del nodo (alerta < 15 %)",
+          "description": "Misma expresión que la alerta 'Poco espacio disponible en disco'.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 38
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "100 * node_filesystem_avail_bytes{job=\"node-exporter\", fstype=~\"ext4|xfs|btrfs\"}\n/ node_filesystem_size_bytes{job=\"node-exporter\", fstype=~\"ext4|xfs|btrfs\"}",
+              "legendFormat": "{{mountpoint}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 15
+                  }
+                ]
+              },
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "row",
+          "id": 18,
+          "title": "Interrupción de red",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 46
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 19,
+          "title": "Red recibida por pod",
+          "description": "cAdvisor, en 1 min.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 47
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum by (pod) (rate(container_network_receive_bytes_total{job=\"kubernetes-cadvisor\", namespace=\"pharmago\", pod!=\"\", interface!=\"lo\"}[1m]))",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 20,
+          "title": "Red enviada por pod",
+          "description": "cAdvisor, en 1 min.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 47
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{job=\"kubernetes-cadvisor\", namespace=\"pharmago\", pod!=\"\", interface!=\"lo\"}[1m]))",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 21,
+          "title": "5xx en 2 min por servicio (alerta > 5)",
+          "description": "Misma expresión que la alerta 'Errores 5xx en un servicio' (D-17).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 47
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "sum by (exported_job) (\n  (pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"5..\"}\n    unless last_over_time(pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"5..\"}[10m] offset 2m))\n  or increase(pharmago_http_requests_total{job=\"otlp-collector\", status_code=~\"5..\"}[2m])\n) or vector(0)",
+              "legendFormat": "{{exported_job}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "row",
+          "id": 22,
+          "title": "Desconexión de componentes (circuit-breaker.sh, kubectl delete pod)",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 55
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "id": 23,
+          "title": "Contenedores iniciados hace menos de 2 min",
+          "description": "Misma expresión que la alerta 'Contenedor reiniciado o reemplazado'.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 56
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "count by (pod) (\n  time() - container_start_time_seconds{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} < 120\n) or vector(0)",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              },
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 24,
+          "title": "Pods terminados (Failed o Succeeded)",
+          "description": "Misma expresión que la alerta 'Pod desalojado o fallido'. Sigue en 1 hasta borrar el pod.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 56
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "count by (pod) (\n  kube_pod_status_phase{namespace=\"pharmago\", phase=~\"Failed|Succeeded\"} == 1\n  and on (pod) kube_pod_owner{namespace=\"pharmago\", owner_kind=~\"ReplicaSet|DaemonSet\"}\n) or vector(0)",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              },
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "id": 25,
+          "title": "Scrapes de Prometheus (up)",
+          "description": "otlp-collector e infra-otlp son los collectors; el resto, lo que scrapea el infra-collector.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 56
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "refId": "A",
+              "editorMode": "code",
+              "expr": "max by (job) (up)",
+              "legendFormat": "{{job}}",
+              "range": true,
+              "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "index": 0
+                    },
+                    "1": {
+                      "text": "UP",
+                      "index": 1
+                    }
+                  }
+                }
+              ]
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value_and_name",
+            "justifyMode": "auto",
+            "orientation": "horizontal"
+          }
+        },
+        {
+          "type": "row",
+          "id": 26,
+          "title": "Logs y trazas",
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 64
+          },
+          "panels": []
+        },
+        {
+          "type": "logs",
+          "id": 27,
+          "title": "Logs Warning y Error del namespace",
+          "description": "Elasticsearch (pharmago-logs-*). Cada log de una request lleva Scopes.TraceId (D-25).",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "elasticsearch"
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 18,
+            "x": 0,
+            "y": 65
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "elasticsearch"
+              },
+              "refId": "A",
+              "query": "LogLevel:(Warning OR Error OR Critical)",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "logs"
+                }
+              ],
+              "bucketAggs": [],
+              "timeField": "@timestamp"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
+        },
+        {
+          "type": "text",
+          "id": 28,
+          "title": "Trazas",
+          "gridPos": {
+            "h": 10,
+            "w": 6,
+            "x": 18,
+            "y": 65
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "- [Trazas del gateway en Explore](/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22jaeger%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22jaeger%22%2C%22uid%22%3A%22jaeger%22%7D%2C%22queryType%22%3A%22search%22%2C%22service%22%3A%22PharmaGo.ApiGateway%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-15m%22%2C%22to%22%3A%22now%22%7D%7D%7D)\n- Desde una traza, el botón de logs abre sus logs en Elasticsearch (D-24).\n- Jaeger UI: http://127.0.0.1:16686\n- Kibana: http://127.0.0.1:5601"
+          }
+        }
+      ]
+    }

@@ -566,6 +566,59 @@ data:
                 summary: "A un deployment de pharmago le faltan réplicas disponibles: un pod se cayó, no está listo o no pudo arrancar."
               labels: {}
               isPaused: false
+            - uid: pharmago-pod-failed
+              title: Pod desalojado o fallido
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: "count by (pod) (\n  kube_pod_status_phase{namespace=\"pharmago\", phase=~\"Failed|Succeeded\"} == 1\n  and on (pod) kube_pod_owner{namespace=\"pharmago\", owner_kind=~\"ReplicaSet|DaemonSet\"}\n) or vector(0)"
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 0
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 0s
+              annotations:
+                summary: "Un pod de un Deployment o DaemonSet de pharmago terminó y no se reinicia (fase Failed o Succeeded), por ejemplo desalojado por pasar su límite de ephemeral-storage. Sigue así hasta borrarlo con kubectl delete pod --field-selector=status.phase!=Running,status.phase!=Pending -n pharmago."
+              labels: {}
+              isPaused: false
 kind: ConfigMap
 metadata:
   name: grafana-alert-rules

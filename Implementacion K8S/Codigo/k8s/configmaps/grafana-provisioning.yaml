@@ -17,6 +17,32 @@ data:
         jsonData:
           timeInterval: 5s
           queryTimeout: 60s
+      - name: Jaeger
+        type: jaeger
+        uid: jaeger
+        access: proxy
+        url: http://jaeger:16686
+        editable: true
+        jsonData:
+          # "Logs for this span" opens the logs of the whole trace in Elasticsearch.
+          # "$$" escapes Grafana's env var interpolation in provisioning files.
+          tracesToLogsV2:
+            datasourceUid: elasticsearch
+            spanStartTimeShift: "-5m"
+            spanEndTimeShift: "5m"
+            customQuery: true
+            query: 'Scopes.TraceId:"$${__trace.traceId}"'
+      - name: Elasticsearch
+        type: elasticsearch
+        uid: elasticsearch
+        access: proxy
+        url: http://elasticsearch:9200
+        editable: true
+        jsonData:
+          index: "pharmago-logs-*"
+          timeField: "@timestamp"
+          logMessageField: Message
+          logLevelField: LogLevel
   dashboards.yml: |
     apiVersion: 1
     providers:

@@ -32,7 +32,7 @@ spec:
                     values: [ops, all]
       containers:
         - name: jaeger
-          image: cr.jaegertracing.io/jaegertracing/jaeger:2.22.0
+          image: cr.jaegertracing.io/jaegertracing/jaeger:2.20.0
           ports:
             - name: ui
               containerPort: 16686
