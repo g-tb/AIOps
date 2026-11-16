@@ -54,7 +54,7 @@ spec:
           limits:
             memory: "384Mi"
             cpu: "500m"
-            # Above this the kubelet evicts the pod and the Deployment replaces it (D-28).
+            # Above this the kubelet evicts the pod and the Deployment replaces it.
             ephemeral-storage: "256Mi"
         startupProbe:
           httpGet:

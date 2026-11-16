@@ -42,7 +42,7 @@ namespace PharmaGo.UsersService.Factory
             })
             // Without a connect timeout, a SYN sent to a deleted pharmacy pod is retried for ~2 min
             // (tcp_syn_retries=6), and the half-open probes kept timing out after pharmacy had
-            // recovered (D-32). Keep it below AttemptTimeoutSeconds.
+            // recovered. Keep it below AttemptTimeoutSeconds.
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
                 ConnectTimeout = TimeSpan.FromSeconds(

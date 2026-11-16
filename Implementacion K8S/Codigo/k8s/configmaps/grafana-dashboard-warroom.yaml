@@ -574,7 +574,7 @@ data:
           "type": "timeseries",
           "id": 9,
           "title": "Rechazos 429 en 2 min (alerta > 12)",
-          "description": "Misma expresión que la alerta 'Rechazos elevados por rate limiting' (D-17).",
+          "description": "Misma expresión que la alerta 'Rechazos elevados por rate limiting'.",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -1237,7 +1237,7 @@ data:
           "type": "timeseries",
           "id": 16,
           "title": "Disco efímero por pod (límite 256Mi)",
-          "description": "k8s_pod_filesystem_usage_bytes del receiver kubeletstats, cada 10 s (D-27). Sobre 256Mi el kubelet desaloja el pod del backend, casi siempre antes de la siguiente muestra: el desalojo se ve en 'Pods terminados' y en la alerta 'Pod desalojado o fallido' (D-28).",
+          "description": "k8s_pod_filesystem_usage_bytes del receiver kubeletstats, cada 10 s. Sobre 256Mi el kubelet desaloja el pod del backend, casi siempre antes de la siguiente muestra: el desalojo se ve en 'Pods terminados' y en la alerta 'Pod desalojado o fallido'.",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -1512,7 +1512,7 @@ data:
           "type": "timeseries",
           "id": 21,
           "title": "5xx en 2 min por servicio (alerta > 5)",
-          "description": "Misma expresión que la alerta 'Errores 5xx en un servicio' (D-17).",
+          "description": "Misma expresión que la alerta 'Errores 5xx en un servicio'.",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -1914,7 +1914,7 @@ data:
           "type": "logs",
           "id": 27,
           "title": "Logs Warning y Error del namespace",
-          "description": "Elasticsearch (pharmago-logs-*). Cada log de una request lleva Scopes.TraceId (D-25).",
+          "description": "Elasticsearch (pharmago-logs-*). Cada log de una request lleva Scopes.TraceId.",
           "datasource": {
             "type": "elasticsearch",
             "uid": "elasticsearch"
@@ -1966,7 +1966,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "- [Trazas del gateway en Explore](/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22jaeger%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22jaeger%22%2C%22uid%22%3A%22jaeger%22%7D%2C%22queryType%22%3A%22search%22%2C%22service%22%3A%22PharmaGo.ApiGateway%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-15m%22%2C%22to%22%3A%22now%22%7D%7D%7D)\n- Desde una traza, el botón de logs abre sus logs en Elasticsearch (D-24).\n- Jaeger UI: http://127.0.0.1:16686\n- Kibana: http://127.0.0.1:5601"
+            "content": "- [Trazas del gateway en Explore](/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22jaeger%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22jaeger%22%2C%22uid%22%3A%22jaeger%22%7D%2C%22queryType%22%3A%22search%22%2C%22service%22%3A%22PharmaGo.ApiGateway%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-15m%22%2C%22to%22%3A%22now%22%7D%7D%7D)\n- Desde una traza, el botón de logs abre sus logs en Elasticsearch.\n- Jaeger UI: http://127.0.0.1:16686\n- Kibana: http://127.0.0.1:5601"
           }
         }
       ]
