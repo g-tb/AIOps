@@ -819,6 +819,64 @@ data:
               labels:
                 severity: critical
               isPaused: false
+            - uid: pharmago-db-down
+              title: "Base de datos no disponible"
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: |
+                      (
+                        kube_endpoint_info{namespace="pharmago", endpoint="pharmago-db"}
+                        unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
+                      )
+                      or vector(0)
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                      - evaluator:
+                          params: [0]
+                          type: gt
+                        operator:
+                          type: and
+                        query:
+                          params: [C]
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                    datasource:
+                      type: __expr__
+                      uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 30s
+              annotations:
+                summary: "El Service pharmago-db no tiene ningún endpoint listo durante 30 segundos: users y pharmacy no llegan a la base de datos y responden 500. Ver RB13 en docs/plan-contencion.md."
+                description: "Viene de kube-state-metrics (recurso endpoints), como la alerta de servicios sin endpoints. La readiness de la DB ejecuta SELECT 1 con sqlcmd, así que también salta si SQL Server está colgado aunque el puerto acepte conexiones. La DB tiene una sola réplica: no hay otra que atienda."
+              labels:
+                severity: critical
+              isPaused: false
 
 kind: ConfigMap
 metadata:

@@ -1746,7 +1746,7 @@ data:
           "type": "timeseries",
           "id": 35,
           "title": "Endpoints listos por Service (alerta con 0)",
-          "description": "Direcciones listas de cada Service (kube-state-metrics). La alerta 'Servicio de la app sin endpoints listos' salta con 0 durante 30 s.",
+          "description": "Direcciones listas de cada Service (kube-state-metrics). Con 0 durante 30 s saltan 'Servicio de la app sin endpoints listos' (users, pharmacy, gateway) y 'Base de datos no disponible' (pharmago-db).",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -1765,7 +1765,7 @@ data:
               },
               "refId": "A",
               "editorMode": "code",
-              "expr": "count by (endpoint) (kube_endpoint_address{namespace=\"pharmago\", ready=\"true\", endpoint=~\"pharmago-(users-service|pharmacy-service|api-gateway)\"})\nor sum by (endpoint) (kube_endpoint_info{namespace=\"pharmago\", endpoint=~\"pharmago-(users-service|pharmacy-service|api-gateway)\"}) * 0",
+              "expr": "count by (endpoint) (kube_endpoint_address{namespace=\"pharmago\", ready=\"true\", endpoint=~\"pharmago-(users-service|pharmacy-service|api-gateway|db)\"})\nor sum by (endpoint) (kube_endpoint_info{namespace=\"pharmago\", endpoint=~\"pharmago-(users-service|pharmacy-service|api-gateway|db)\"}) * 0",
               "legendFormat": "{{endpoint}}",
               "range": true,
               "instant": false
