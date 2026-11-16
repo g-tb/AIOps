@@ -58,3 +58,5 @@ k8s/.port-forward.pids
 .docker/
 docker-compose.override.yml
 .port-forward.pids
+.port-forward-watch.pids
+.port-forward-watch.log

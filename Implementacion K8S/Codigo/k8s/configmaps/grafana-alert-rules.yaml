@@ -94,7 +94,8 @@ data:
               annotations:
                 summary: "CPU del nodo superior al 85 % de la cuota de minikube durante un minuto."
                 description: "cAdvisor del cgroup raíz del nodo (el contenedor de minikube) sobre su cuota de CPU (--cpus). node-exporter ve todas las CPU de la VM, que pueden ser más. Sin cuota, se usan las CPU de la máquina."
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
             - uid: fg3u5lj2d296ob
               title: Memoria elevada del nodo
@@ -153,7 +154,8 @@ data:
               annotations:
                 summary: "Memoria del nodo superior al 85 % del límite de minikube durante un minuto."
                 description: "Working set del cgroup raíz del nodo (cAdvisor) sobre su límite (--memory), que publica node-exporter como node_cgroup_memory_max_bytes. MemTotal es la memoria de la VM o del host, que puede ser mayor. Sin límite, se usa la memoria de la máquina."
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
             - uid: dg3u5x6sdukg0e
               title: Poco espacio disponible en disco
@@ -206,7 +208,8 @@ data:
               for: 1m
               annotations:
                 summary: Espacio disponible inferior al 15 % durante un minuto
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
             - uid: fg3u64uftysxsc
               title: Rechazos elevados por rate limiting
@@ -259,7 +262,8 @@ data:
               for: 30s
               annotations:
                 summary: El Gateway registra más de 12 rechazos HTTP 429 en 2 minutos, durante 30 segundos. Cuenta también la primera ráfaga después de un reinicio.
-              labels: {}
+              labels:
+                severity: info
               isPaused: false
             - uid: bg3u6aoxqfgn4c
               title: Collector OTLP inaccesible
@@ -312,7 +316,8 @@ data:
               for: 30s
               annotations:
                 summary: Prometheus no pudo consultar las métricas del Collector OTLP durante 30 segundos.
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
             - uid: pharmago-http-5xx
               title: Errores 5xx en un servicio
@@ -365,7 +370,8 @@ data:
               for: 30s
               annotations:
                 summary: Un servicio respondió más de 5 errores 5xx en 2 minutos, durante 30 segundos. Cuenta también los primeros errores después de un reinicio.
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
             - uid: pharmago-pod-cpu
               title: CPU del pod cerca de su límite
@@ -418,7 +424,8 @@ data:
               for: 30s
               annotations:
                 summary: Un pod usa más del 70 % de su límite de CPU durante 30 segundos.
-              labels: {}
+              labels:
+                severity: info
               isPaused: false
             - uid: pharmago-pod-memory
               title: Memoria del pod cerca de su límite
@@ -471,7 +478,8 @@ data:
               for: 30s
               annotations:
                 summary: Un pod usa más del 85 % de su límite de memoria durante 30 segundos.
-              labels: {}
+              labels:
+                severity: info
               isPaused: false
             - uid: pharmago-container-restart
               title: Contenedor reiniciado o reemplazado
@@ -525,7 +533,8 @@ data:
               annotations:
                 summary: "Un contenedor de pharmago arrancó hace menos de 2 minutos: se reinició, se reemplazó su pod o hubo un rollout."
                 description: "No cuenta los pods de prueba caos-alerta-* de chaos-engineering/alertas: así solo salta la alerta del escenario."
-              labels: {}
+              labels:
+                severity: info
               isPaused: false
             - uid: pharmago-replicas-unavailable
               title: Réplicas no disponibles
@@ -578,7 +587,8 @@ data:
               for: 0s
               annotations:
                 summary: "A un deployment de pharmago le faltan réplicas disponibles: un pod se cayó, no está listo o no pudo arrancar."
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
             - uid: pharmago-pod-failed
               title: Pod desalojado o fallido
@@ -631,7 +641,8 @@ data:
               for: 0s
               annotations:
                 summary: "Un pod de un Deployment o DaemonSet de pharmago terminó y no se reinicia (fase Failed o Succeeded), por ejemplo desalojado por pasar su límite de ephemeral-storage. Sigue así hasta borrarlo con kubectl delete pod --field-selector=status.phase!=Running,status.phase!=Pending -n pharmago."
-              labels: {}
+              labels:
+                severity: warning
               isPaused: false
         - orgId: 1
           name: aplicacion
@@ -816,6 +827,64 @@ data:
               annotations:
                 summary: "El Service de users, pharmacy o el gateway no tiene ningún endpoint listo durante 30 segundos: no le llega tráfico."
                 description: "Viene de kube-state-metrics (recurso endpoints). Cubre pods caídos o no Ready y un selector del Service que no apunta a ningún pod. En un rollout normal siempre queda una réplica lista. También salta si no llegan datos de kube-state-metrics (KSM o el infra-collector caídos): sin ellos no se puede confirmar que haya endpoints. No salta por eso con el otlp-collector caído ni en los 2 minutos siguientes, mientras el infra-collector reenvía: esa caída tiene su propia alerta."
+              labels:
+                severity: critical
+              isPaused: false
+            - uid: pharmago-db-down
+              title: "Base de datos no disponible"
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    editorMode: code
+                    expr: |
+                      (
+                        kube_endpoint_info{namespace="pharmago", endpoint="pharmago-db"}
+                        unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
+                      )
+                      or vector(0)
+                    instant: true
+                    intervalMs: 1000
+                    legendFormat: __auto
+                    maxDataPoints: 43200
+                    range: false
+                    refId: A
+                - refId: C
+                  relativeTimeRange:
+                    from: 600
+                    to: 0
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                      - evaluator:
+                          params: [0]
+                          type: gt
+                        operator:
+                          type: and
+                        query:
+                          params: [C]
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                    datasource:
+                      type: __expr__
+                      uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 30s
+              annotations:
+                summary: "El Service pharmago-db no tiene ningún endpoint listo durante 30 segundos: users y pharmacy no llegan a la base de datos y responden 500. Ver RB13 en docs/plan-contencion.md."
+                description: "Viene de kube-state-metrics (recurso endpoints), como la alerta de servicios sin endpoints. La readiness de la DB ejecuta SELECT 1 con sqlcmd, así que también salta si SQL Server está colgado aunque el puerto acepte conexiones. La DB tiene una sola réplica: no hay otra que atienda."
               labels:
                 severity: critical
               isPaused: false

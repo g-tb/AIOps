@@ -68,19 +68,30 @@ spec:
         volumeMounts:
         - name: sql-storage
           mountPath: /var/opt/mssql
+        # Both probes run a query: a tcpSocket probe stays green while SQL Server hangs,
+        # because the kernel still accepts the connection.
         readinessProbe:
-          tcpSocket:
-            port: 1433
+          exec:
+            command:
+            - sh
+            - -c
+            - exec /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$SA_PASSWORD" -Q "SELECT 1" -b -l 3
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
+        # More tolerant than readiness, so a transient load spike does not restart the DB:
+        # about 90 s without answering before the restart.
         livenessProbe:
-          tcpSocket:
-            port: 1433
+          exec:
+            command:
+            - sh
+            - -c
+            - exec /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$SA_PASSWORD" -Q "SELECT 1" -b -l 3
           initialDelaySeconds: 60
           periodSeconds: 30
-          timeoutSeconds: 5
+          timeoutSeconds: 10
+          failureThreshold: 3
         resources:
           requests:
             memory: "768Mi"
