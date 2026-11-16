@@ -79,6 +79,9 @@ spec:
             - name: root
               mountPath: /host/root
               readOnly: true
+              # Mounts made on the node later (disco-bajo.sh) show up here, and their
+              # unmount too: no restart, and no copy of the mount left behind.
+              mountPropagation: HostToContainer
             - name: proc
               mountPath: /host/proc
               readOnly: true

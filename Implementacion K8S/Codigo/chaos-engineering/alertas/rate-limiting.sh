@@ -30,6 +30,8 @@ while time.monotonic() < fin:
     except urllib.error.HTTPError as error:
         print("HTTP", error.code, flush=True)
         error.close()
+    except Exception as error:  # timeout o conexion cortada: se sigue generando
+        print("Error", type(error).__name__, flush=True)
     time.sleep(0.05)
 '
 kubectl logs -n pharmago -f "$POD" --pod-running-timeout=120s

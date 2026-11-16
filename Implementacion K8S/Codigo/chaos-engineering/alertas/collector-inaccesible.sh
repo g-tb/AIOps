@@ -14,7 +14,9 @@ limpiar() {
     kubectl rollout status deployment/otlp-collector -n pharmago --timeout=120s
 }
 if [[ ${1:-} == --restore ]]; then
-    if [[ $(kubectl get deploy otlp-collector -n pharmago -o jsonpath='{.spec.replicas}') == 0 ]]; then limpiar; fi
+    REPLICAS=$(kubectl get deploy otlp-collector -n pharmago -o jsonpath='{.spec.replicas}') ||
+        { echo 'No se pudo leer el Collector: corre de nuevo con --restore.'; exit 1; }
+    if [[ $REPLICAS == 0 ]]; then limpiar; fi
     exit
 fi
 [[ -z $(kubectl get pods -n pharmago -l caos=alertas -o name) ]] || { echo 'Termina la otra prueba primero.'; exit 1; }

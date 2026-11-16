@@ -78,10 +78,7 @@ spec:
         type: DirectoryOrCreate
 YAML
 kubectl wait -n pharmago --for=condition=Ready "pod/$POD" --timeout=150s
-# El bind mount original de node-exporter debe reconocer el nuevo filesystem.
-echo 'Se reinicia node-exporter: sus metricas se cortan unos segundos y salta tambien "Contenedor reiniciado o reemplazado".'
-kubectl delete pod -n pharmago -l app=node-exporter --wait=true
-kubectl rollout status daemonset/node-exporter -n pharmago --timeout=120s
+# node-exporter ve el montaje sin reiniciarse: su /host/root usa mountPropagation HostToContainer.
 echo 'Buscar mountpoint=/tmp/caos-alerta-disco/montaje en Prometheus.'
 kubectl logs -n pharmago -f "$POD"
 kubectl wait -n pharmago --for=jsonpath='{.status.phase}'=Succeeded "pod/$POD" --timeout=15s

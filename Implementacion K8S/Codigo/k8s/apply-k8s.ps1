@@ -53,6 +53,7 @@ kubectl apply -f configmaps\grafana-dashboard-infra.yaml
 kubectl apply -f configmaps\grafana-dashboard-warroom.yaml
 # Conservar las tildes al enviar el YAML entre comandos en Windows PowerShell.
 $OutputEncoding = [System.Text.UTF8Encoding]::new()
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 kubectl create configmap grafana-dashboards-guide -n pharmago `
     --from-file=../grafana/provisioning/dashboards/pharmago-grafana-guide.json `
     --from-file=../grafana/provisioning/dashboards/node-exporter-full_rev46.json `

@@ -12,7 +12,9 @@ CONTEXTO=${PHARMAGO_CONTEXT:-minikube}
 SERVICE=pharmago-users-service
 selector() { kubectl get service "$SERVICE" -n pharmago -o go-template='{{len .spec.selector}} {{index .spec.selector "app"}}'; }
 limpiar() {
-    if [[ $(selector) == '1 caos-alerta-servicio' ]]; then
+    local actual
+    actual=$(selector) || { echo 'No se pudo leer el selector de Users: corre de nuevo con --restore.'; return 1; }
+    if [[ $actual == '1 caos-alerta-servicio' ]]; then
         kubectl patch service "$SERVICE" -n pharmago --type=json \
             -p='[{"op":"replace","path":"/spec/selector","value":{"app":"pharmago-users-service"}}]'
     fi

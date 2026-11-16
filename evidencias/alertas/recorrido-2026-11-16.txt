@@ -3,6 +3,8 @@ Fecha: 2026-11-16, minikube de un nodo (driver docker, --cpus=4, --memory=8192),
 grafana-dashboards-alerts. Horas en America/Montevideo (UTC-3).
 Cada script se corrió de a uno, con chequeo de salud antes y después.
 Tiempos de alerta: estado leído de la API de Grafana cada 3 s (reglas evaluadas cada 10 s).
+Pending es la primera vez que el registrador lo vio: puede llegar hasta ~10 s tarde, por eso
+en rate limiting, collector y memoria el tramo Pending -> Firing es algo menor que el "for".
 "t+" se cuenta desde el inicio del script. El pico es el del panel del War room que
 usa la misma expresión que la alerta.
 
@@ -46,8 +48,15 @@ usa la misma expresión que la alerta.
 7. disco-bajo.sh (03:05:09): ext4 de 128 MiB montado en el nodo y lleno al 89 %, 360 s.
    Panel "Disco disponible del nodo": el montaje de prueba baja a 10,4 % (umbral 15).
    Poco espacio disponible en disco: Pending t+24 s, Firing t+87 s, Normal 19 s después
-   del final. También salta "Contenedor reiniciado o reemplazado" (t+27 s a t+149 s),
-   porque el script reinicia node-exporter. El montaje se desarmó y la imagen se borró.
+   del final. También saltó "Contenedor reiniciado o reemplazado" (t+27 s a t+149 s),
+   porque esa versión del script reiniciaba node-exporter, y el pod nuevo de node-exporter
+   se quedó con una copia del montaje: 100 MB del /tmp del nodo (tmpfs, o sea RAM)
+   retenidos hasta reiniciarlo otra vez.
+   Corrida con el arreglo (03:46:08): node-exporter monta /host/root con
+   mountPropagation HostToContainer y el script ya no lo reinicia. Poco espacio disponible
+   en disco: Pending t+21 s, Firing t+79 s, Normal 26 s después del final. No saltó
+   "Contenedor reiniciado". Al terminar: /tmp del nodo con 8 KB usados, sin montajes loop
+   en node-exporter, que siguió con el mismo pod.
 
 8. memoria-elevada.sh (03:26:04): reserva RAM hasta el 88 % del límite de minikube.
    El script reservó 2752 MiB (el nodo estaba en 55 % de 8192 MiB).
@@ -60,5 +69,9 @@ usa la misma expresión que la alerta.
    reserva de a 8 MiB releyendo el uso hasta llegar al 88 %.
 
 Resultado: las 8 alertas pasaron a Firing con su script y volvieron a Normal. Los pods de
-prueba (caos-alerta-*) no dispararon "Contenedor reiniciado o reemplazado". Después de cada
+prueba (caos-alerta-*) no dispararon "Contenedor reiniciado o reemplazado".
+Después de este recorrido, la revisión de código agregó cambios menores a los scripts:
+los generadores siguen ante errores de red, el proxy de latencia reenvía los headers y
+las limpiezas fallan con un mensaje si no pueden leer el estado. El proxy se probó en
+local; esos cambios no se volvieron a correr en el cluster. Después de cada
 script: sin pods caos-alerta-*, selector de users restaurado y collector con 1 réplica.

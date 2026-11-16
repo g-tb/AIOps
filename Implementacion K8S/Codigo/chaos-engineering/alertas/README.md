@@ -22,7 +22,7 @@ minikube image pull alpine:3.20
 
 `disco-bajo.sh` instala además `e2fsprogs` y `util-linux` con `apk add` cada vez: necesita Internet aunque la imagen ya esté.
 
-Los pods de prueba (`caos-alerta-*`) no disparan "Contenedor reiniciado o reemplazado": esa regla los excluye, para que solo salte la alerta del escenario. `disco-bajo.sh` sí la dispara, porque reinicia node-exporter. No requieren port-forward para generar el fallo: el tráfico se genera dentro del clúster. Usá tus accesos existentes para ver Grafana, Prometheus y Kibana.
+Los pods de prueba (`caos-alerta-*`) no disparan "Contenedor reiniciado o reemplazado": esa regla los excluye, para que solo salte la alerta del escenario. No requieren port-forward para generar el fallo: el tráfico se genera dentro del clúster. Usá tus accesos existentes para ver Grafana, Prometheus y Kibana.
 
 **Ejecutá una sola prueba a la vez**, con la aplicación sin otras cargas de prueba. Mantené abierta la terminal. `Ctrl+C` ejecuta la recuperación; si cerraste la terminal o se interrumpió la conexión, ejecutá el mismo archivo con `--restore`. Los pods temporales tienen un tiempo máximo de vida, pero ese límite no restaura por sí solo un Service ni las réplicas del Collector: para esos casos ejecutá `--restore`.
 
@@ -134,7 +134,7 @@ bash disco-bajo.sh --restore
 
 **Qué provoca:** monta un ext4 temporal de **128 MiB** en `/tmp/caos-alerta-disco/montaje` del nodo y escribe 100 MiB dentro. El espacio disponible de ese filesystem queda por debajo de 15%. Se elimina el archivo de relleno junto con su filesystem al desmontar y eliminar la imagen. No se llena el disco de datos del equipo. En tu configuración se observaron cientos de GiB libres; llenar ese disco no sería una prueba razonable.
 
-El pod temporal necesita privilegios y propagación de montajes. Reinicia solamente el pod de **node-exporter** para que vea el nuevo montaje. Esto produce una interrupción breve de métricas del nodo y dispara también "Contenedor reiniciado o reemplazado". Si tu runtime no permite montar loop/ext4 o propagar el montaje, la prueba falla: revisá `kubectl logs caos-alerta-disco -n pharmago` mientras exista y no intentes llenar el disco principal como sustituto.
+El pod temporal necesita privilegios y propagación de montajes. node-exporter ve el montaje sin reiniciarse, porque su `/host/root` usa `mountPropagation: HostToContainer`. Si tu runtime no permite montar loop/ext4 o propagar el montaje, la prueba falla: revisá `kubectl logs caos-alerta-disco -n pharmago` mientras exista y no intentes llenar el disco principal como sustituto.
 
 **Gráficas:** espacio disponible por filesystem en Node Exporter Full. Buscá el montaje temporal; puede no aparecer en un panel que solo muestre `/`.
 
@@ -288,7 +288,7 @@ bash latencia-api.sh --restore
 
 **Qué provoca:** crea un proxy temporal, lo conecta al Service de Users y añade dos segundos a cada GET `/api/`. El proxy reenvía al IP de un pod real de Users y deja `/metrics` sin demora. Después genera GET a `/api/roles/ping` a través del Gateway durante 10 minutos. El Gateway registra el tiempo real de espera: el P95 que debería superar 1000 ms es **PharmaGo.ApiGateway**, mientras Users procesa rápido la petición una vez que la recibe.
 
-No cambia el código, las réplicas ni los puertos. Durante la prueba, el proxy está preparado para GET y rechaza escrituras con 503: evitá usar las funciones de modificación de Users. Al terminar o hacer Ctrl+C se restaura primero el selector del Service y luego se borra el proxy. Si el pod real de Users elegido se reinicia, la prueba puede fallar; restaurá y repetí con la aplicación estable.
+No cambia el código, las réplicas ni los puertos. Durante la prueba, el proxy reenvía los GET con sus headers (incluido `Authorization`) y rechaza escrituras con 503: evitá usar las funciones de modificación de Users. Al terminar o hacer Ctrl+C se restaura primero el selector del Service y luego se borra el proxy. Si el pod real de Users elegido se reinicia, la prueba puede fallar; restaurá y repetí con la aplicación estable.
 
 **Gráficas:** fila "Latencia" del War room, y P50, P95 y P99 por servicio en Extended Summary. El tiempo impreso por el script es el de cada petición de prueba; el P95 representa una ventana de todas las peticiones del servicio.
 

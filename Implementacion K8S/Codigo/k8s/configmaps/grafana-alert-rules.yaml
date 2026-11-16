@@ -776,7 +776,7 @@ data:
                         kube_endpoint_info{namespace="pharmago", endpoint=~"pharmago-(users-service|pharmacy-service|api-gateway)"}
                         unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
                       )
-                      or (absent(kube_endpoint_info{namespace="pharmago"}) unless on () (up{job="otlp-collector"} == 0))
+                      or (absent(kube_endpoint_info{namespace="pharmago"}) unless on () (min_over_time(up{job=~"otlp-collector|infra-otlp"}[2m]) == 0))
                       or vector(0)
                     instant: true
                     intervalMs: 1000
@@ -815,7 +815,7 @@ data:
               for: 30s
               annotations:
                 summary: "El Service de users, pharmacy o el gateway no tiene ningún endpoint listo durante 30 segundos: no le llega tráfico."
-                description: "Viene de kube-state-metrics (recurso endpoints). Cubre pods caídos o no Ready y un selector del Service que no apunta a ningún pod. En un rollout normal siempre queda una réplica lista. También salta si no llegan datos de kube-state-metrics (KSM o el infra-collector caídos): sin ellos no se puede confirmar que haya endpoints. No salta por eso con el otlp-collector caído, que tiene su propia alerta."
+                description: "Viene de kube-state-metrics (recurso endpoints). Cubre pods caídos o no Ready y un selector del Service que no apunta a ningún pod. En un rollout normal siempre queda una réplica lista. También salta si no llegan datos de kube-state-metrics (KSM o el infra-collector caídos): sin ellos no se puede confirmar que haya endpoints. No salta por eso con el otlp-collector caído ni en los 2 minutos siguientes, mientras el infra-collector reenvía: esa caída tiene su propia alerta."
               labels:
                 severity: critical
               isPaused: false

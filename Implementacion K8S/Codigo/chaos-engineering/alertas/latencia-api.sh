@@ -14,7 +14,9 @@ SERVICE=pharmago-users-service
 selector() { kubectl get service "$SERVICE" -n pharmago -o go-template='{{len .spec.selector}} {{index .spec.selector "app"}}'; }
 limpiar() {
     # Primero se restaura el trafico y despues se elimina el proxy.
-    if [[ $(selector) == '1 caos-alerta-latencia' ]]; then
+    local actual
+    actual=$(selector) || { echo 'No se pudo leer el selector de Users: corre de nuevo con --restore.'; return 1; }
+    if [[ $actual == '1 caos-alerta-latencia' ]]; then
         kubectl patch service "$SERVICE" -n pharmago --type=json \
             -p='[{"op":"replace","path":"/spec/selector","value":{"app":"pharmago-users-service"}}]' || return 1
     fi
@@ -42,11 +44,14 @@ class Proxy(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/"):
             time.sleep(2)
+        # Se reenvian los headers del cliente (Authorization incluido), salvo los de conexion.
+        cabeceras = {k: v for k, v in self.headers.items() if k.lower() not in ("host", "connection")}
+        pedido = urllib.request.Request("http://" + os.environ["UPSTREAM"] + self.path, headers=cabeceras)
         try:
-            respuesta = urllib.request.urlopen("http://" + os.environ["UPSTREAM"] + self.path, timeout=10)
+            respuesta = urllib.request.urlopen(pedido, timeout=10)
         except urllib.error.HTTPError as error:
             respuesta = error
-        except urllib.error.URLError:
+        except Exception:
             self.send_error(502)
             return
         with respuesta:
@@ -71,7 +76,10 @@ import time, urllib.request
 fin = time.monotonic() + 600
 while time.monotonic() < fin:
     inicio = time.monotonic()
-    with urllib.request.urlopen("http://pharmago-api-gateway/api/roles/ping", timeout=15) as respuesta:
-        print("HTTP", respuesta.status, "segundos", round(time.monotonic() - inicio, 2), flush=True)
+    try:
+        with urllib.request.urlopen("http://pharmago-api-gateway/api/roles/ping", timeout=15) as respuesta:
+            print("HTTP", respuesta.status, "segundos", round(time.monotonic() - inicio, 2), flush=True)
+    except Exception as error:  # 429, 5xx o timeout: se sigue generando
+        print("Error", type(error).__name__, "segundos", round(time.monotonic() - inicio, 2), flush=True)
     time.sleep(1)
 '
