@@ -46,6 +46,7 @@ kubectl apply -f configmaps/grafana-provisioning.yaml
 kubectl apply -f configmaps/grafana-alert-rules.yaml
 kubectl apply -f configmaps/grafana-dashboards.yaml
 kubectl apply -f configmaps/grafana-dashboard-infra.yaml
+kubectl apply -f configmaps/grafana-dashboard-warroom.yaml
 kubectl create configmap grafana-dashboards-guide -n pharmago \
   --from-file=../grafana/provisioning/dashboards/pharmago-grafana-guide.json \
   --from-file=../grafana/provisioning/dashboards/node-exporter-full_rev46.json \
@@ -133,6 +134,8 @@ kubectl apply -f deployments/ops/prometheus-deployment.yaml
 kubectl apply -f services/ops/node-exporter-service.yaml
 kubectl apply -f deployments/ops/node-exporter-daemonset.yaml
 kubectl apply -f deployments/ops/infra-collector-deployment.yaml
+kubectl apply -f services/ops/kube-state-metrics-service.yaml
+kubectl apply -f deployments/ops/kube-state-metrics-deployment.yaml
 
 kubectl apply -f services/ops/grafana-service.yaml
 kubectl apply -f deployments/ops/grafana-deployment.yaml

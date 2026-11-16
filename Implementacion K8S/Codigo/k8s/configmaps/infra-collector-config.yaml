@@ -17,6 +17,10 @@ data:
               static_configs:
                 - targets: ["node-exporter:9100"]
 
+            - job_name: kube-state-metrics
+              static_configs:
+                - targets: ["kube-state-metrics:8080"]
+
             - job_name: kubernetes-cadvisor
               kubernetes_sd_configs:
                 - role: node
@@ -36,7 +40,30 @@ data:
                 - source_labels: [__meta_kubernetes_node_name]
                   target_label: node
 
+      # Per-pod disk usage (ephemeral storage) from the kubelet summary API. cAdvisor only
+      # has write rates per pod. Read through the API server proxy, so the cluster CA
+      # validates the certificate; it covers the node this collector runs on.
+      kubeletstats:
+        collection_interval: 10s
+        auth_type: serviceAccount
+        endpoint: "kubernetes.default.svc:443/api/v1/nodes/${env:K8S_NODE_NAME}/proxy"
+        metric_groups: [pod]
+
     processors:
+      filter/pod-storage:
+        error_mode: ignore
+        metrics:
+          metric:
+            - 'not IsMatch(name, "^k8s\\.pod\\.filesystem\\.")'
+      # prometheus/infra does not turn resource attributes into labels: copy them with the
+      # same label names cAdvisor uses.
+      transform/pod-labels:
+        error_mode: ignore
+        metric_statements:
+          - context: datapoint
+            statements:
+              - set(attributes["namespace"], resource.attributes["k8s.namespace.name"])
+              - set(attributes["pod"], resource.attributes["k8s.pod.name"])
       memory_limiter:
         check_interval: 1s
         limit_mib: 192
@@ -56,4 +83,8 @@ data:
         metrics:
           receivers: [prometheus]
           processors: [memory_limiter, batch]
+          exporters: [otlp]
+        metrics/pod-storage:
+          receivers: [kubeletstats]
+          processors: [memory_limiter, filter/pod-storage, transform/pod-labels, batch]
           exporters: [otlp]

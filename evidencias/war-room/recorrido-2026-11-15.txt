@@ -1,0 +1,52 @@
+Recorrido del dashboard "PharmaGo - War room" con los scripts de caos
+Fecha: 2026-11-15, minikube de un nodo. Horas en America/Montevideo (UTC-3).
+Cada script se corrió una vez, de a uno, con chequeo de salud antes y después.
+Tiempos de alerta: estado leído de la API de Grafana cada 3 s (reglas evaluadas cada 10 s).
+"t+" se cuenta desde el inicio del script.
+
+1. Inyección de requests: load-requests.sh 100 (17:56:23)
+   Fila "Inyección de requests": 429 en 2 min llega a 90 a t+25 s (umbral 12).
+   Rechazos elevados por rate limiting: Pending t+25 s, Firing t+49 s.
+   La señal vuelve a 0 a t+136 s, al salir de la ventana de 2 min. Sin limpieza.
+
+2. Sobrecarga de CPU: cpu-spike.sh pharmago-api-gateway 120 (17:59:14)
+   Fila "Sobrecarga de CPU": el pod llega a 122 % de su límite (umbral 70).
+   CPU del pod cerca de su límite: Pending t+73 s, Firing t+103 s.
+   El script no termina solo (timeout 150). Limpieza: borrar el pod; 2/2 Ready en 11 s.
+
+3. Sobrecarga de memoria: ram-spike.sh (300 MB, 120 s) (18:03:14)
+   Fila "Sobrecarga de memoria": el pod llega a 87 % de su límite (umbral 85).
+   Memoria del pod cerca de su límite: Pending t+31 s, Firing t+64 s,
+   Normal 22 s después de liberar la memoria. Sin limpieza.
+
+4. Sobrecarga de storage: volume-spike.sh (300 MB) (18:06:31)
+   dd escribe 300 MB en 0,6 s; el kubelet desaloja el pod por pasar su límite de
+   ephemeral-storage (256Mi) y el Deployment crea otro.
+   Contenedor reiniciado o reemplazado: Firing t+24 s.
+   Réplicas no disponibles: Firing t+27 s.
+   Pod desalojado o fallido: Firing t+30 s; Normal ~28 s después de borrar el pod.
+   El panel "Disco efímero por pod" no muestra el pico: el desalojo llega antes de la
+   siguiente muestra de 10 s. Con volume-spike.sh ... 100 (bajo el límite) el panel
+   muestra 100 MB hasta borrar el archivo.
+   El gateway respondió 200 todo el tiempo (la otra réplica).
+   Limpieza: kubectl delete pod --field-selector=status.phase!=Running,status.phase!=Pending -n pharmago
+
+5. Desconexión de componentes: circuit-breaker.sh (18:08:52)
+   Borra los 2 pods de pharmacy. Los reemplazos arrancan en ~1 s.
+   Réplicas no disponibles: Firing t+22 s, Normal t+82 s.
+   Contenedor reiniciado o reemplazado: Firing t+25 s.
+   Errores 5xx en un servicio (UsersService): Pending t+64 s, Firing t+88 s.
+   Resultado del script: FAIL. El circuito de users siguió abierto: los half-open de
+   t+56, t+88 y t+122 s cortaron por timeout (2 s) sin llegar a pharmacy (sin span de
+   servidor en Jaeger). Cerró a t+179 s, con el primer pedido después de que terminara
+   el script. Causa: el cliente users -> pharmacy no tenía ConnectTimeout, y un SYN a un
+   pod borrado se reintenta ~127 s (tcp_syn_retries=6).
+   Con ConnectTimeout de 1 s (commit "fix(users): add connect timeout to pharmacy client"),
+   4 corridas más dieron PASS: 17, 17, 16 y 41 s. En la de 41 s el circuito se abrió y se
+   cerró en el primer half-open, a los 30 s. El connect timeout aparece en los logs como
+   "Retry scheduled ... LastError=TaskCanceledException" y responde 503, no 500.
+
+6. Interrupción de red: no hay script (R2). La fila muestra red por pod y 5xx.
+
+Carga del dashboard: las 20 queries de una pasada de refresh, con rango de 15 min,
+respondieron en 1,1 s (6 en paralelo, por la API de Grafana).

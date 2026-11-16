@@ -66,9 +66,14 @@ spec:
                 values: [ops, all]
       containers:
       - name: infra-collector
-        image: otel/opentelemetry-collector-contrib:latest
+        image: otel/opentelemetry-collector-contrib:0.165.0
         args:
         - "--config=/etc/otel/config.yaml"
+        env:
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         resources:
           requests:
             cpu: "100m"
