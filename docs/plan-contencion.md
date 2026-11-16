@@ -69,11 +69,11 @@ el sistema se recupera solo.
 | **Probes de la DB con una consulta** (`sqlcmd SELECT 1`) | SQL Server colgado: sale de Ready y, a los ~90 s, se reinicia | `k8s/deployments/ops/db-deployment.yaml` | Alerta "Base de datos no disponible" |
 | **Límites de CPU** (500m por pod de la app) | Un pod que consume CPU de más: se lo frena (throttling) sin afectar al resto | `resources.limits.cpu` | El pod se queda en ~0,48 cores |
 | **Límites de memoria** (384Mi) | Una fuga de memoria: OOMKill de ese contenedor y reinicio | `resources.limits.memory` | `OOMKilled` en "Última terminación por contenedor" |
-| **Límites de `ephemeral-storage`** (256Mi) | Un pod que llena el disco: el kubelet lo desaloja antes de que llene el nodo | `resources.limits.ephemeral-storage` (D-28) | Pod en `Completed`, reemplazo listo en ~18 s |
-| **Circuit breaker** users → pharmacy (Polly) | Una cascada: si pharmacy cae, users responde 503 en milisegundos en vez de colgarse | `PharmacyResilience` en `appsettings.json` de users (D-08, D-32) | 503 rápidos (7–9 ms) con `X-Circuit-State: open`; se cierra al volver pharmacy |
+| **Límites de `ephemeral-storage`** (256Mi) | Un pod que llena el disco: el kubelet lo desaloja antes de que llene el nodo | `resources.limits.ephemeral-storage` | Pod en `Completed`, reemplazo listo en ~18 s |
+| **Circuit breaker** users → pharmacy (Polly) | Una cascada: si pharmacy cae, users responde 503 en milisegundos en vez de colgarse | `PharmacyResilience` en `appsettings.json` de users, más el `ConnectTimeout` de su `HttpClient` | 503 rápidos (7–9 ms) con `X-Circuit-State: open`; se cierra al volver pharmacy |
 | **Retry y timeout por intento** (2 s, 3 reintentos, `ConnectTimeout` 1 s) | Fallos transitorios hacia pharmacy | Ídem | Logs `Retry scheduled ... Attempt=n` |
-| **Rate limiting** en el gateway (por IP y por réplica) | Abuso o exceso de requests de un cliente | `IpRateLimiting` en `appsettings.json` del gateway (D-09) | 429 en vez de saturar los servicios |
-| **RollingUpdate** con `maxUnavailable: 0` | Un deploy no corta el servicio | Deployments (D-05) | 0 errores durante el rollout |
+| **Rate limiting** en el gateway (por IP y por réplica) | Abuso o exceso de requests de un cliente | `IpRateLimiting` en `appsettings.json` del gateway | 429 en vez de saturar los servicios |
+| **RollingUpdate** con `maxUnavailable: 0` | Un deploy no corta el servicio | Deployments ([despliegue-seguro.md](despliegue-seguro.md)) | 0 errores durante el rollout |
 
 **Lo que no está contenido** (y por eso tiene runbook manual): la DB tiene una sola réplica,
 la saturación del nodo no tiene a dónde moverse (un solo nodo) y el circuit breaker no cubre
@@ -255,7 +255,7 @@ mitigación manual → verificación**, y el script que lo simula.
   code", "Rechazos 429 en 2 min", "4xx sin 429 en 2 min por servicio". En Kibana, los logs del
   gateway para ver la ruta. El origen (IP) no está verificado en los logs.
 - **Respuesta automática:** el rate limiting del gateway rechaza con 429 lo que pasa del
-  límite, por IP y **por réplica** (cada pod cuenta por separado, D-09). Los servicios de atrás
+  límite, por IP y **por réplica** (cada pod cuenta por separado). Los servicios de atrás
   no se saturan.
 - **Mitigación manual:** si es abuso, esperar a que termine o cortar el origen. Si es tráfico
   legítimo, escalar el gateway (`kubectl scale deployment/pharmago-api-gateway --replicas=3 -n pharmago`),
@@ -270,7 +270,7 @@ mitigación manual → verificación**, y el script que lo simula.
 - **Diagnóstico:** War room → fila "Latencia": "Latencia p95 por servicio en /api" dice qué
   servicio. Panel "Trazas" o Jaeger: la traza lenta muestra en qué span se va el tiempo
   (gateway, users, pharmacy o la DB). Mirar también CPU del pod (RB3) y de la DB.
-- **Respuesta automática:** timeout de 2 s por intento y reintentos en users → pharmacy (D-08);
+- **Respuesta automática:** timeout de 2 s por intento y reintentos en users → pharmacy;
   si pharmacy no responde, el circuito se abre (RB9).
 - **Mitigación manual:** reiniciar el deployment lento
   (`kubectl rollout restart deployment/<deploy> -n pharmago`) o escalarlo. Si empezó con un
@@ -341,7 +341,7 @@ mitigación manual → verificación**, y el script que lo simula.
 - **Diagnóstico:** War room → "Disco efímero por pod (límite 256Mi)" y "Pods terminados";
   `kubectl get events -n pharmago --field-selector reason=Evicted`.
 - **Respuesta automática:** al pasar 256Mi el kubelet desaloja el pod (~10 s) y el Deployment
-  lo reemplaza (listo en ~18 s); la otra réplica atiende sin corte (D-28).
+  lo reemplaza (listo en ~18 s); la otra réplica atiende sin corte.
 - **Mitigación manual:** borrar el pod terminado, que mantiene la alerta encendida:
   `kubectl delete pod --field-selector=status.phase!=Running,status.phase!=Pending -n pharmago`.
   Después, buscar qué escribía (logs, `/tmp`).
@@ -579,5 +579,5 @@ su caída es un corte hasta que el pod se reinicia (RB13).
 **Riesgos conocidos:**
 - La liveness de la DB con `sqlcmd` podría reiniciarla bajo una carga muy alta (tolera ~90 s
   sin respuesta). No se probó bajo carga.
-- El rate limiting cuenta por réplica: con 2 réplicas el límite efectivo es el doble (D-09).
+- El rate limiting cuenta por réplica: con 2 réplicas el límite efectivo es el doble.
 - `kubectl debug` (RB12) deja contenedores efímeros terminados en el pod; se van con el pod.
