@@ -88,10 +88,6 @@ spec:
           mountPath: /etc/grafana/provisioning/dashboards/prometheus-2-0-overview_rev2.json
           subPath: prometheus-2-0-overview_rev2.json
           readOnly: true
-        - name: grafana-dashboards-guide
-          mountPath: /etc/grafana/provisioning/dashboards/prometheus-stats_rev2.json
-          subPath: prometheus-stats_rev2.json
-          readOnly: true
         - name: grafana-dashboard-warroom
           mountPath: /etc/grafana/provisioning/dashboards/pharmago-war-room.json
           subPath: pharmago-war-room.json
