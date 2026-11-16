@@ -39,17 +39,23 @@ def leer(nombre):
     except OSError:
         return None
 
+def meminfo():
+    with open("/proc/meminfo") as archivo:
+        return {l.split()[0].rstrip(":"): int(l.split()[1]) * 1024 for l in archivo}
+
 def estado():
     """Working set y limite del cgroup del nodo, como los calcula la alerta."""
+    info = meminfo()
+    total = info["MemTotal"]
     if leer("memory.current") is not None:  # cgroup v2
         uso, stat, clave, limite = leer("memory.current"), leer("memory.stat"), "inactive_file", leer("memory.max")
     else:  # cgroup v1
         uso, stat, clave, limite = (leer("memory/memory.usage_in_bytes"), leer("memory/memory.stat"),
                                     "total_inactive_file", leer("memory/memory.limit_in_bytes"))
+    if uso is None or stat is None:  # sin cgroup propio (driver de VM): la memoria de la maquina
+        return total - info["MemAvailable"], total
     inactiva = next((int(l.split()[1]) for l in stat.splitlines() if l.split()[0] == clave), 0)
-    with open("/proc/meminfo") as archivo:
-        total = next(int(l.split()[1]) * 1024 for l in archivo if l.startswith("MemTotal:"))
-    limite = int(limite) if limite.isdigit() and int(limite) < total else total
+    limite = int(limite) if limite and limite.isdigit() and int(limite) < total else total
     return max(0, int(uso) - inactiva), limite
 
 uso, limite = estado()

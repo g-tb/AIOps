@@ -297,12 +297,12 @@ No cambia el código, las réplicas ni los puertos. Durante la prueba, el proxy 
 ```promql
 histogram_quantile(0.95,
   sum by (le, exported_job) (
-    rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*"}[2m])
+    rate(pharmago_http_request_duration_milliseconds_bucket{job="otlp-collector", endpoint=~"/api/.*"}[2m])
   )
 )
 and on (exported_job) (
-  sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_count{endpoint=~"/api/.*"}[2m]))
-  - sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*", le="1000.0"}[2m]))
+  sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_count{job="otlp-collector", endpoint=~"/api/.*"}[2m]))
+  - sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_bucket{job="otlp-collector", endpoint=~"/api/.*", le=~"1000(\\.0)?"}[2m]))
   >= 3
 )
 ```
@@ -359,7 +359,7 @@ unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
 count by (endpoint) (kube_endpoint_address{namespace="pharmago", ready="true"})
 ```
 
-Vienen de kube-state-metrics (recurso `endpoints`).
+Vienen de kube-state-metrics (recurso `endpoints`). La regla también salta si no llegan datos de kube-state-metrics: sin ellos no se puede confirmar que haya endpoints.
 
 **Kibana — consecuencias en Gateway o dependencias:**
 

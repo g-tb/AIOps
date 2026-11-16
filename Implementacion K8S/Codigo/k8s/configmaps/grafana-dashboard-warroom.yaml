@@ -296,7 +296,7 @@ data:
               },
               "refId": "A",
               "editorMode": "code",
-              "expr": "100 * (1 - (\n  (sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", endpoint=~\"/api/.*\", status_code=~\"5..\"}[1m])) or vector(0))\n  / sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", endpoint=~\"/api/.*\"}[1m]))\n)) or vector(100)",
+              "expr": "100 * (1 - (\n  (sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", endpoint=~\"/api/.*\", status_code=~\"5..\"}[1m])) or vector(0))\n  / (sum(rate(pharmago_http_requests_total{job=\"otlp-collector\", exported_job=\"PharmaGo.ApiGateway\", endpoint=~\"/api/.*\"}[1m])) > 0)\n)) or vector(100)",
               "legendFormat": "",
               "range": true,
               "instant": false
