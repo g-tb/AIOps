@@ -7,12 +7,13 @@ if [[ ${1:-} == --help ]]; then
 fi
 [[ $# == 0 || ( $# == 1 && $1 == --restore ) ]] || exit 1
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
-[[ $(kubectl config current-context) == minikube ]] || { echo 'Selecciona el contexto minikube.'; exit 1; }
+CONTEXTO=${PHARMAGO_CONTEXT:-minikube}
+[[ $(kubectl config current-context) == "$CONTEXTO" ]] || { echo "Selecciona el contexto $CONTEXTO o define PHARMAGO_CONTEXT."; exit 1; }
 POD=caos-alerta-disco
 limpiar() { kubectl delete pod "$POD" -n pharmago --ignore-not-found --wait=true; }
 if [[ ${1:-} == --restore ]]; then limpiar; exit; fi
 [[ -z $(kubectl get pods -n pharmago -l caos=alertas -o name) ]] || { echo 'Termina la otra prueba primero.'; exit 1; }
-[[ $(kubectl get nodes -o name | wc -l) == 1 ]] || { echo 'Requiere un unico nodo.'; exit 1; }
+[[ $(kubectl get nodes --no-headers | grep -c .) == 1 ]] || { echo 'Requiere un unico nodo.'; exit 1; }
 trap limpiar EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -78,6 +79,7 @@ spec:
 YAML
 kubectl wait -n pharmago --for=condition=Ready "pod/$POD" --timeout=150s
 # El bind mount original de node-exporter debe reconocer el nuevo filesystem.
+echo 'Se reinicia node-exporter: sus metricas se cortan unos segundos y salta tambien "Contenedor reiniciado o reemplazado".'
 kubectl delete pod -n pharmago -l app=node-exporter --wait=true
 kubectl rollout status daemonset/node-exporter -n pharmago --timeout=120s
 echo 'Buscar mountpoint=/tmp/caos-alerta-disco/montaje en Prometheus.'

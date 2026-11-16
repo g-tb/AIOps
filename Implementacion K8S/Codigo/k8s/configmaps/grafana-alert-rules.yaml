@@ -19,7 +19,13 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "100 * (\r\n  1 - avg by (instance) (\r\n    rate(node_cpu_seconds_total{\r\n      job=\"node-exporter\",\r\n      mode=\"idle\"\r\n    }[2m])\r\n  )\r\n)"
+                    expr: |
+                      100 * max(rate(container_cpu_usage_seconds_total{job="kubernetes-cadvisor", id="/"}[2m]))
+                      / (
+                        (max(container_spec_cpu_quota{job="kubernetes-cadvisor", id="/"})
+                          / max(container_spec_cpu_period{job="kubernetes-cadvisor", id="/"}))
+                        or max(machine_cpu_cores{job="kubernetes-cadvisor"})
+                      )
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -86,7 +92,8 @@ data:
               execErrState: Error
               for: 1m
               annotations:
-                summary: CPU del nodo superior al 85 % durante un minuto.
+                summary: "CPU del nodo superior al 85 % de la cuota de minikube durante un minuto."
+                description: "cAdvisor del cgroup raíz del nodo (el contenedor de minikube) sobre su cuota de CPU (--cpus). node-exporter ve todas las CPU de la VM, que pueden ser más. Sin cuota, se usan las CPU de la máquina."
               labels: {}
               isPaused: false
             - uid: fg3u5lj2d296ob
@@ -100,7 +107,12 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "100 * (\r\n  1 -\r\n  node_memory_MemAvailable_bytes{job=\"node-exporter\"}\r\n  /\r\n  node_memory_MemTotal_bytes{job=\"node-exporter\"}\r\n)"
+                    expr: |
+                      100 * max(container_memory_working_set_bytes{job="kubernetes-cadvisor", id="/"})
+                      / (
+                        max(node_cgroup_memory_max_bytes{job="node-exporter"})
+                        or max(machine_memory_bytes{job="kubernetes-cadvisor"})
+                      )
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -139,7 +151,8 @@ data:
               execErrState: Error
               for: 1m
               annotations:
-                summary: Memoria usada del nodo superior al 85 % durante un minuto
+                summary: "Memoria del nodo superior al 85 % del límite de minikube durante un minuto."
+                description: "Working set del cgroup raíz del nodo (cAdvisor) sobre su límite (--memory), que publica node-exporter como node_cgroup_memory_max_bytes. MemTotal es la memoria de la VM o del host, que puede ser mayor. Sin límite, se usa la memoria de la máquina."
               labels: {}
               isPaused: false
             - uid: dg3u5x6sdukg0e
@@ -471,7 +484,7 @@ data:
                   datasourceUid: prometheus
                   model:
                     editorMode: code
-                    expr: "count by (pod) (\n  time() - container_start_time_seconds{namespace=\"pharmago\", container!=\"\", container!=\"POD\"} < 120\n) or vector(0)"
+                    expr: "count by (pod) (\n  time() - container_start_time_seconds{namespace=\"pharmago\", container!=\"\", container!=\"POD\", pod!~\"caos-alerta-.*\"} < 120\n) or vector(0)"
                     instant: true
                     intervalMs: 1000
                     legendFormat: __auto
@@ -511,6 +524,7 @@ data:
               for: 0s
               annotations:
                 summary: "Un contenedor de pharmago arrancó hace menos de 2 minutos: se reinició, se reemplazó su pod o hubo un rollout."
+                description: "No cuenta los pods de prueba caos-alerta-* de chaos-engineering/alertas: así solo salta la alerta del escenario."
               labels: {}
               isPaused: false
             - uid: pharmago-replicas-unavailable

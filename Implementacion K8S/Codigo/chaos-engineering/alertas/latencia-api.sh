@@ -7,7 +7,8 @@ if [[ ${1:-} == --help ]]; then
 fi
 [[ $# == 0 || ( $# == 1 && $1 == --restore ) ]] || exit 1
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
-[[ $(kubectl config current-context) == minikube ]] || { echo 'Selecciona el contexto minikube.'; exit 1; }
+CONTEXTO=${PHARMAGO_CONTEXT:-minikube}
+[[ $(kubectl config current-context) == "$CONTEXTO" ]] || { echo "Selecciona el contexto $CONTEXTO o define PHARMAGO_CONTEXT."; exit 1; }
 POD=caos-alerta-latencia
 SERVICE=pharmago-users-service
 selector() { kubectl get service "$SERVICE" -n pharmago -o go-template='{{len .spec.selector}} {{index .spec.selector "app"}}'; }

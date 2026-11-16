@@ -1,6 +1,6 @@
 # Probar e investigar las ocho alertas
 
-Los ocho scripts de esta carpeta corresponden a las reglas de `k8s/alerting/pharmago-alerts.yaml`. No cambian sus consultas, umbrales ni tiempos. Los scripts anteriores de `chaos-engineering/` siguen disponibles, pero cargar un solo pod no garantiza disparar una alerta del nodo completo.
+Los ocho scripts de esta carpeta corresponden a reglas de `k8s/configmaps/grafana-alert-rules.yaml`. No cambian sus consultas, umbrales ni tiempos. El panel de cada una está en el dashboard **PharmaGo - War room**. Los scripts anteriores de `chaos-engineering/` siguen disponibles, pero cargar un solo pod no garantiza disparar una alerta del nodo completo.
 
 ## Cómo ejecutar
 
@@ -11,20 +11,31 @@ kubectl config current-context
 bash cpu-elevada.sh
 ```
 
-Requieren contexto `minikube`, namespace `pharmago`, `kubectl`, Bash y acceso a Internet desde el nodo para descargar las imágenes de prueba. CPU, memoria y disco requieren un único nodo. Las imágenes son `python:3.12-alpine` y, para disco, `alpine:3.20` con herramientas ext4. No requieren port-forward para generar el fallo: el tráfico se genera dentro del clúster. Usá tus accesos existentes para ver Grafana, Prometheus y Kibana.
+Requieren namespace `pharmago`, `kubectl` y Bash. Verifican que el contexto actual sea `minikube`; si tu contexto o perfil tiene otro nombre, definí `PHARMAGO_CONTEXT` (por ejemplo, `PHARMAGO_CONTEXT=mi-perfil bash cpu-elevada.sh`). CPU, memoria y disco requieren un único nodo. Probados en Git Bash (Windows) con minikube y el driver docker; en Linux y en el bash 3.2 de macOS, **sin verificar**.
+
+**Imágenes:** `python:3.12-alpine` y, para disco, `alpine:3.20`. Si no están en el nodo, se descargan al correr cada script. Para no depender de la red en una demo, bajalas antes:
+
+```bash
+minikube image pull python:3.12-alpine
+minikube image pull alpine:3.20
+```
+
+`disco-bajo.sh` instala además `e2fsprogs` y `util-linux` con `apk add` cada vez: necesita Internet aunque la imagen ya esté.
+
+Los pods de prueba (`caos-alerta-*`) no disparan "Contenedor reiniciado o reemplazado": esa regla los excluye, para que solo salte la alerta del escenario. `disco-bajo.sh` sí la dispara, porque reinicia node-exporter. No requieren port-forward para generar el fallo: el tráfico se genera dentro del clúster. Usá tus accesos existentes para ver Grafana, Prometheus y Kibana.
 
 **Ejecutá una sola prueba a la vez**, con la aplicación sin otras cargas de prueba. Mantené abierta la terminal. `Ctrl+C` ejecuta la recuperación; si cerraste la terminal o se interrumpió la conexión, ejecutá el mismo archivo con `--restore`. Los pods temporales tienen un tiempo máximo de vida, pero ese límite no restaura por sí solo un Service ni las réplicas del Collector: para esos casos ejecutá `--restore`.
 
 | Alerta | Archivo | Condición actual | Duración de la prueba |
 |---|---|---|---|
-| CPU elevada del nodo | `cpu-elevada.sh` | Uso >85% por 1 minuto, con ventana de 2 minutos | 4 minutos |
-| Memoria elevada del nodo | `memoria-elevada.sh` | Uso >85% por 1 minuto | 3 minutos después de reservar RAM |
+| CPU elevada del nodo | `cpu-elevada.sh` | Uso >85% de la cuota de CPU de minikube por 1 minuto, con ventana de 2 minutos | 4 minutos |
+| Memoria elevada del nodo | `memoria-elevada.sh` | Uso >85% del límite de memoria de minikube por 1 minuto | 3 minutos después de reservar RAM |
 | Poco espacio disponible en disco | `disco-bajo.sh` | Disponible <15% por 1 minuto | 6 minutos desde el montaje |
 | Rechazos elevados por rate limiting | `rate-limiting.sh` | Más de 0,1 HTTP 429/s por 30 segundos, ventana de 2 minutos | 4 minutos |
 | Collector OTLP inaccesible | `collector-inaccesible.sh` | `1 - up` >0,5 por 30 segundos | 2 minutos con Collector detenido |
-| Alta tasa de errores de la API | `errores-api.sh` | Errores >5% por 5 minutos, ventana de 5 minutos | 10 minutos |
-| Latencia P95 elevada de la API | `latencia-api.sh` | P95 >1000 ms por 5 minutos, ventana de 5 minutos | 10 minutos |
-| Servicio de aplicación inaccesible | `servicio-inaccesible.sh` | `up` <0,5 por 1 minuto | 2 minutos y medio |
+| Errores 4xx en un servicio | `errores-api.sh` | Más de 20 respuestas 4xx (sin 429) en 2 minutos, por 30 segundos | 10 minutos |
+| Latencia P95 elevada de la API | `latencia-api.sh` | P95 >1000 ms en 2 minutos, con al menos 3 requests de más de 1 s, por 30 segundos | 10 minutos |
+| Servicio de la app sin endpoints listos | `servicio-inaccesible.sh` | Users, Pharmacy o el Gateway sin ningún endpoint listo por 30 segundos | 2 minutos y medio |
 
 Los tiempos no incluyen descarga de imágenes ni preparación. La evaluación de Grafana es cada 10 segundos; el scraping y la exportación OTLP añaden demora. La carga habitual del nodo puede impedir alcanzar un umbral. El script genera la condición; **confirmá en Grafana que la regla llegue a Firing**, no solamente que el script finalice.
 
@@ -34,7 +45,7 @@ Los tiempos no incluyen descarga de imágenes ni preparación. La evaluación de
 2. Abrí Prometheus en Graph y ejecutá la consulta de la sección correspondiente. Usá un rango de 15–30 minutos y observá cómo cruza el umbral.
 3. Ejecutá el script. Verificá la secuencia **Normal → Pending → Firing**. `Pending` significa que se superó el umbral, pero todavía no pasó todo el tiempo requerido. `No Data` o `Error` no prueban el disparo de la condición.
 4. En Kibana, abrí **Discover**, data view `pharmago-logs-*`, campo temporal `@timestamp`, lenguaje **KQL**, últimos 15–30 minutos y actualización automática. Filtrá al intervalo exacto del incidente. Los logs pueden llegar con algunos segundos de atraso.
-5. Cuando termine, verificá la recuperación en Prometheus y Grafana. Para tasas y percentiles, los datos de la prueba permanecen en la ventana de 2 o 5 minutos. Para errores/latencia conviene generar tráfico sano después; sin peticiones, el resultado puede pasar a `No Data` en vez de a Normal.
+5. Cuando termine, verificá la recuperación en Prometheus y Grafana. Para tasas y percentiles, los datos de la prueba permanecen en la ventana de 2 minutos. Sin peticiones, las alertas de la API valen 0 y vuelven a Normal solas.
 
 Las consultas de Prometheus bajo **Confirmar la alerta** reproducen las reglas actuales. Las de **Investigar** desglosan la causa. `rate()` expresa eventos por segundo y `histogram_quantile()` estima el percentil a partir de los buckets: no es el tiempo de una petición individual. [Referencia de Prometheus](https://prometheus.io/docs/prometheus/latest/querying/functions/).
 
@@ -48,15 +59,19 @@ bash cpu-elevada.sh
 bash cpu-elevada.sh --restore
 ```
 
-**Qué provoca:** procesos de cálculo en todos los CPU visibles del nodo durante 240 segundos. Se les da menor prioridad para favorecer a los procesos de monitoreo. Se eliminan al finalizar. Puede ralentizar toda tu aplicación y disparar también latencia.
+**Qué provoca:** procesos de cálculo en todos los CPU visibles del nodo durante 240 segundos. Si la VM tiene más CPU que la cuota de minikube (`--cpus`), igual la satura. Se les da menor prioridad para favorecer a los procesos de monitoreo. Se eliminan al finalizar. Puede ralentizar toda tu aplicación y disparar también latencia.
 
-**Gráficas:** CPU del nodo en Node Exporter Full y CPU por pod en PharmaGo - Infra. El 85% es el promedio del nodo, no el porcentaje de un solo contenedor.
+**Gráficas:** CPU del nodo en el War room y CPU por pod en PharmaGo - Infra. El 85% es sobre la cuota de minikube, no el porcentaje de un solo contenedor. Node Exporter Full mide sobre todas las CPU de la VM y puede mostrar menos.
 
 **Confirmar la alerta — porcentaje usado:**
 
 ```promql
-100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{job="node-exporter", mode="idle"}[2m])))
+100 * max(rate(container_cpu_usage_seconds_total{job="kubernetes-cadvisor", id="/"}[2m]))
+/ ((max(container_spec_cpu_quota{job="kubernetes-cadvisor", id="/"}) / max(container_spec_cpu_period{job="kubernetes-cadvisor", id="/"}))
+   or max(machine_cpu_cores{job="kubernetes-cadvisor"}))
 ```
+
+`id="/"` es el cgroup raíz del nodo, o sea el contenedor de minikube. Sin cuota, se usan las CPU de la máquina.
 
 **Investigar — CPU consumido por pod, en núcleos:**
 
@@ -81,15 +96,20 @@ bash memoria-elevada.sh
 bash memoria-elevada.sh --restore
 ```
 
-**Qué provoca:** calcula cuánta RAM falta para aproximarse a 88% usado y la reserva por 180 segundos. Por defecto permite como máximo **1024 MiB adicionales**. Si no alcanza, informa cuánto se necesita y sale sin reservar. Podés pasar otro máximo, por ejemplo `bash memoria-elevada.sh 1536`, después de revisar la capacidad de tu equipo. No aumentes el máximo a ciegas. El script libera RAM si detecta menos de 10% disponible; Kubernetes también podría expulsar el pod de prueba por presión de memoria.
+**Qué provoca:** lee el cgroup del nodo (el contenedor de minikube) y calcula cuánta RAM falta para llegar a 88% de su límite (`--memory`), la misma base que la alerta. La reserva por 180 segundos. Por defecto permite como máximo **4096 MiB adicionales**; si hace falta más, informa cuánto y sale sin reservar. Podés pasar otro máximo, por ejemplo `bash memoria-elevada.sh 2048`. El script libera la RAM si el nodo pasa el 92% de su límite. El pod no tiene requests ni limits: si falta memoria, el kernel lo mata primero a él.
 
-**Gráficas:** RAM del nodo en Node Exporter Full y memoria por pod en PharmaGo - Infra.
+En Windows y macOS, la memoria que reserva sale de la VM de Docker: medí la memoria disponible del equipo antes de correrlo.
+
+**Gráficas:** memoria del nodo en el War room y memoria por pod en PharmaGo - Infra. Node Exporter Full mide sobre `MemTotal`, que es la memoria de la VM o del host, y puede mostrar menos.
 
 **Confirmar la alerta — porcentaje usado:**
 
 ```promql
-100 * (1 - node_memory_MemAvailable_bytes{job="node-exporter"} / node_memory_MemTotal_bytes{job="node-exporter"})
+100 * max(container_memory_working_set_bytes{job="kubernetes-cadvisor", id="/"})
+/ (max(node_cgroup_memory_max_bytes{job="node-exporter"}) or max(machine_memory_bytes{job="kubernetes-cadvisor"}))
 ```
+
+`node_cgroup_memory_max_bytes` lo publica node-exporter al arrancar, leyendo el `memory.max` del nodo. Si minikube no tiene límite (por ejemplo, con un driver de VM), no existe y se usa la memoria de la máquina.
 
 **Investigar — memoria de trabajo por pod, en bytes:**
 
@@ -114,7 +134,7 @@ bash disco-bajo.sh --restore
 
 **Qué provoca:** monta un ext4 temporal de **128 MiB** en `/tmp/caos-alerta-disco/montaje` del nodo y escribe 100 MiB dentro. El espacio disponible de ese filesystem queda por debajo de 15%. Se elimina el archivo de relleno junto con su filesystem al desmontar y eliminar la imagen. No se llena el disco de datos del equipo. En tu configuración se observaron cientos de GiB libres; llenar ese disco no sería una prueba razonable.
 
-El pod temporal necesita privilegios y propagación de montajes. Reinicia solamente el pod de **node-exporter** para que vea el nuevo montaje. Esto produce una interrupción breve de métricas del nodo. Si tu runtime no permite montar loop/ext4 o propagar el montaje, la prueba falla: revisá `kubectl logs caos-alerta-disco -n pharmago` mientras exista y no intentes llenar el disco principal como sustituto.
+El pod temporal necesita privilegios y propagación de montajes. Reinicia solamente el pod de **node-exporter** para que vea el nuevo montaje. Esto produce una interrupción breve de métricas del nodo y dispara también "Contenedor reiniciado o reemplazado". Si tu runtime no permite montar loop/ext4 o propagar el montaje, la prueba falla: revisá `kubectl logs caos-alerta-disco -n pharmago` mientras exista y no intentes llenar el disco principal como sustituto.
 
 **Gráficas:** espacio disponible por filesystem en Node Exporter Full. Buscá el montaje temporal; puede no aparecer en un panel que solo muestre `/`.
 
@@ -157,7 +177,7 @@ bash rate-limiting.sh --restore
 
 **Qué provoca:** envía GET a `/api/roles/ping` a través del Gateway desde la misma IP de un pod. Tu configuración actual permite 100 solicitudes/minuto por IP; al superarla deberían aparecer HTTP 429. El límite está en memoria en cada réplica, por eso no siempre empieza en el mismo número de peticiones. No se hacen compras ni se crean usuarios.
 
-**Gráficas:** tráfico, errores por código y tasa de errores en Extended Summary. La gráfica de porcentaje de errores y esta alerta pueden subir a la vez porque 429 es un 4xx.
+**Gráficas:** fila "Inyección de requests" del War room. El 429 no cuenta para la alerta de errores 4xx.
 
 **Confirmar la alerta — rechazos por segundo:**
 
@@ -216,23 +236,24 @@ kubernetes.namespace_name: "pharmago" and (kubernetes.labels.app: "otlp-collecto
 
 **Qué revisar y hacer:** verificá `kubectl get deploy,pods,svc -n pharmago`, los eventos y `kubectl logs deployment/otlp-collector -n pharmago --tail=100`. Revisá el error del target en Prometheus, el Service, sus EndpointSlices y los puertos configurados antes de asumir que falló la instrumentación. Esta alerta comprueba el endpoint de scraping `8889`: no valida por sí sola todo el protocolo OTLP ni Jaeger. En esta prueba corresponde restaurar la réplica; en un fallo real, corregí la causa indicada por logs/eventos, por ejemplo configuración inválida, OOM o falta de recursos. El Collector detenido no puede producir logs nuevos: mirá los inmediatamente anteriores a su caída.
 
-## 6. Alta tasa de errores de la API
+## 6. Errores 4xx en un servicio
 
 ```bash
 bash errores-api.sh
 bash errores-api.sh --restore
 ```
 
-**Qué provoca:** envía dos GET por segundo directamente a una ruta inexistente de Users: `/api/caos-alerta-no-existe`. Produce 404 sin pasar por el rate limiter. Mantiene el tráfico 10 minutos para cubrir la ventana y el tiempo pendiente de la regla. Incluye 4xx porque así está definida tu alerta; no es exclusivamente una alerta de errores 500.
+**Qué provoca:** envía dos GET por segundo directamente a una ruta inexistente de Users: `/api/caos-alerta-no-existe`. Produce 404 sin pasar por el rate limiter. Mantiene el tráfico 10 minutos. La alerta cuenta 4xx sin el 429: los 5xx y el 429 tienen alertas propias.
 
-**Gráficas:** porcentaje de errores y errores por código de Extended Summary. Un 404 esperado de la prueba cuenta como error para esta regla.
+**Gráficas:** "Errores 4xx" en la fila "Inyección de requests" del War room.
 
-**Confirmar la alerta — porcentaje global de errores de rutas API:**
+**Confirmar la alerta — 4xx sin 429 en 2 minutos, por servicio:**
 
 ```promql
-(sum(rate(pharmago_http_errors_total{endpoint=~"/api/.*"}[5m])) or vector(0))
-/ sum(rate(pharmago_http_requests_total{endpoint=~"/api/.*"}[5m])) * 100
+sum by (exported_job) (increase(pharmago_http_requests_total{job="otlp-collector", status_code=~"4..", status_code!="429", endpoint=~"/api/.*"}[2m]))
 ```
+
+La regla suma además la primera muestra de una serie nueva (como la alerta de 5xx), así que la ve unos 45 segundos antes que esta consulta.
 
 **Investigar — servicio, endpoint y código:**
 
@@ -241,8 +262,6 @@ sum by (exported_job, endpoint, status_code) (
   rate(pharmago_http_requests_total{endpoint=~"/api/.*", status_code=~"4..|5.."}[5m])
 )
 ```
-
-El porcentaje actual agrega Gateway y servicios; una misma operación puede contarse en más de un salto. No lo interpretes como porcentaje de usuarios afectados.
 
 **Kibana — causa técnica del servicio:**
 
@@ -258,13 +277,7 @@ kubernetes.pod_name: "caos-alerta-errores" and log: "HTTP 404"
 
 **Qué revisar y hacer:** localizá la ruta y el código antes de reiniciar servicios. Para 404 revisá URL/rutas; para 401/403 autenticación y permisos; para 429 rate limiting; para 5xx excepciones, base de datos y dependencias. Un 404 puede no generar un log de error: el middleware lo cuenta en métricas, pero no escribe automáticamente un log por cada request. En un incidente real correlacioná los logs disponibles por tiempo, pod y `correlation_id` si figura en `Scopes` o en el mensaje.
 
-**Recuperación:** detené la prueba y usá una ruta válida de Users o la aplicación durante al menos cinco minutos. Para evitar que el rate limiter contamine la recuperación, podés consultar una vez por segundo el puerto directo de Users usando el port-forward existente:
-
-```bash
-for i in {1..360}; do curl -sS -o /dev/null http://127.0.0.1:5001/api/roles/ping; sleep 1; done
-```
-
-Sin tráfico nuevo, la tasa puede acabar sin un porcentaje definido, por lo que `No Data` no demuestra recuperación.
+**Recuperación:** al detener la prueba, el conteo vuelve a 0 en unos 2 minutos, con o sin tráfico.
 
 ## 7. Latencia P95 elevada de la API
 
@@ -277,17 +290,24 @@ bash latencia-api.sh --restore
 
 No cambia el código, las réplicas ni los puertos. Durante la prueba, el proxy está preparado para GET y rechaza escrituras con 503: evitá usar las funciones de modificación de Users. Al terminar o hacer Ctrl+C se restaura primero el selector del Service y luego se borra el proxy. Si el pod real de Users elegido se reinicia, la prueba puede fallar; restaurá y repetí con la aplicación estable.
 
-**Gráficas:** P95 por servicio y latencia por endpoint en Extended Summary. El tiempo impreso por el script es el de cada petición de prueba; el P95 representa una ventana de todas las peticiones del servicio.
+**Gráficas:** fila "Latencia" del War room, y P50, P95 y P99 por servicio en Extended Summary. El tiempo impreso por el script es el de cada petición de prueba; el P95 representa una ventana de todas las peticiones del servicio.
 
-**Confirmar la alerta — P95 en milisegundos:**
+**Confirmar la alerta — P95 en milisegundos, solo con al menos 3 requests de más de 1 s en 2 minutos:**
 
 ```promql
 histogram_quantile(0.95,
   sum by (le, exported_job) (
-    rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*"}[5m])
+    rate(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*"}[2m])
   )
 )
+and on (exported_job) (
+  sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_count{endpoint=~"/api/.*"}[2m]))
+  - sum by (exported_job) (increase(pharmago_http_request_duration_milliseconds_bucket{endpoint=~"/api/.*", le="1000.0"}[2m]))
+  >= 3
+)
 ```
+
+La guarda de 3 requests lentas evita que la dispare una sola request lenta, como el primer login después de un rato sin tráfico (2,5 a 5 s).
 
 **Investigar — P95 por servicio y ruta:**
 
@@ -313,30 +333,33 @@ kubernetes.pod_name: "caos-alerta-latencia" and log: "GET /api/roles/ping"
 
 **Qué revisar y hacer:** separá Gateway de servicio final y encontrá qué endpoint se volvió lento. Compará CPU, RAM, errores y tráfico en el mismo intervalo. Revisá dependencias, SQL, esperas de red, timeouts y reintentos; si necesitás el detalle de una operación usá también sus trazas en Jaeger. No alcanza con aumentar un timeout para solucionar la causa. La app no registra obligatoriamente cada duración en logs; una búsqueda vacía de timeouts es compatible con una petición lenta que termina con 200.
 
-**Recuperación:** restaurá el selector y generá GET sanos por el Gateway (por ejemplo `/api/roles/ping` con tu puerto existente `5000`, una consulta cada 3 segundos para evitar 429). Esperá a que salgan de la ventana las peticiones lentas. Si no hay más tráfico, el P95 puede quedar sin datos en vez de bajar.
+**Recuperación:** al restaurar el selector, la alerta vuelve a Normal cuando las requests lentas salen de la ventana de 2 minutos, con o sin tráfico.
 
-## 8. Servicio de aplicación inaccesible
+## 8. Servicio de la app sin endpoints listos
 
 ```bash
 bash servicio-inaccesible.sh
 bash servicio-inaccesible.sh --restore
 ```
 
-**Qué provoca:** cambia temporalmente el selector del Service de Users a una etiqueta sin pods. Prometheus deja de poder consultar `/metrics` a través de ese Service durante 150 segundos. Conserva las dos réplicas y sus datos; luego restaura exactamente el selector original, que valida antes de comenzar. Es una falla de enrutamiento/disponibilidad del Service, no un crash de .NET.
+**Qué provoca:** cambia temporalmente el selector del Service de Users a una etiqueta sin pods: el Service queda sin endpoints durante 150 segundos y no le llega tráfico. Conserva las dos réplicas y sus datos; luego restaura exactamente el selector original, que valida antes de comenzar. Es una falla de enrutamiento/disponibilidad del Service, no un crash de .NET.
 
-**Gráficas:** disponibilidad de servicios en Extended Summary y Status → Targets en Prometheus. Esta regla tiene una instancia por target de Service, no por cada réplica.
+**Gráficas:** "Endpoints listos por Service" en la fila "Desconexión de componentes" del War room. La regla tiene una instancia por Service, no por réplica.
 
-**Confirmar la alerta — 0 inaccesible, 1 accesible:**
-
-```promql
-up{job=~"users-service|pharmacy-service|api-gateway"}
-```
-
-**Investigar — tiempo de scraping por servicio:**
+**Confirmar la alerta — Services sin ningún endpoint listo (vacío si están todos bien):**
 
 ```promql
-scrape_duration_seconds{job=~"users-service|pharmacy-service|api-gateway"}
+kube_endpoint_info{namespace="pharmago", endpoint=~"pharmago-(users-service|pharmacy-service|api-gateway)"}
+unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
 ```
+
+**Investigar — endpoints listos por Service:**
+
+```promql
+count by (endpoint) (kube_endpoint_address{namespace="pharmago", ready="true"})
+```
+
+Vienen de kube-state-metrics (recurso `endpoints`).
 
 **Kibana — consecuencias en Gateway o dependencias:**
 
@@ -346,7 +369,7 @@ kubernetes.labels.app: ("pharmago-api-gateway" or "pharmago-users-service") and 
 
 **Qué revisar y hacer:** comprobá el error del target, `kubectl get pods -n pharmago`, `kubectl get svc pharmago-users-service -n pharmago -o yaml` y `kubectl get endpointslices -n pharmago -l kubernetes.io/service-name=pharmago-users-service`. En esta prueba verás pods sanos pero ningún endpoint elegido por el Service. Restaurá el selector. En un incidente real, diferenciá selector incorrecto, pods no Ready, reinicios, puerto equivocado o problema de red. No reinicies un pod sano para intentar corregir un selector incorrecto.
 
-Si no hacés solicitudes mientras el Service está aislado, puede que no haya logs de error nuevos: Prometheus falla al conectarse, antes de llegar a la aplicación. `up=1` tras recuperar solo confirma que `/metrics` responde; probá también una función real de la aplicación.
+Si no hacés solicitudes mientras el Service está aislado, puede que no haya logs de error nuevos. Que vuelvan los endpoints solo confirma que el Service apunta a pods listos; probá también una función real de la aplicación.
 
 ## Verificación final
 
