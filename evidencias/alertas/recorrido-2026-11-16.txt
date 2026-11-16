@@ -1,0 +1,64 @@
+Recorrido de los 8 scripts de chaos-engineering/alertas/ con sus alertas y el war-room
+Fecha: 2026-11-16, minikube de un nodo (driver docker, --cpus=4, --memory=8192), rama
+grafana-dashboards-alerts. Horas en America/Montevideo (UTC-3).
+Cada script se corrió de a uno, con chequeo de salud antes y después.
+Tiempos de alerta: estado leído de la API de Grafana cada 3 s (reglas evaluadas cada 10 s).
+"t+" se cuenta desde el inicio del script. El pico es el del panel del War room que
+usa la misma expresión que la alerta.
+
+1. errores-api.sh (02:05:16): 2 GET/s con 404 directo a users durante 600 s.
+   Panel "4xx sin 429 en 2 min por servicio": users llega a 254 (umbral 20).
+   Errores 4xx en un servicio: Pending t+54 s, Firing t+93 s, Normal 2 min 48 s
+   después del final del script.
+
+2. latencia-api.sh (02:20:22): proxy de 2 s delante de users, GET por el gateway.
+   Panel "Latencia p95 por servicio en /api": gateway 2425 ms (umbral 1000).
+   Latencia P95 elevada de la API: Pending t+42 s, Firing t+79 s.
+   Se cortó a los 93 s con --restore porque Windows bajó de 1 GB disponible; volvió a
+   Normal unos 3 min después del restore.
+
+3. servicio-inaccesible.sh (02:25:02): selector del Service de users sin pods, 150 s.
+   Panel "Endpoints listos por Service": users baja de 2 a 0 en 20 s.
+   Servicio de la app sin endpoints listos: Pending t+24 s, Firing t+54 s, Normal 34 s
+   después del final.
+
+4. rate-limiting.sh (02:30:48): GET por el gateway desde un solo pod.
+   Panel "Rechazos 429 en 2 min": llega a 1978 (umbral 12).
+   Rechazos elevados por rate limiting: Pending t+72 s, Firing t+93 s, Normal 2 min 51 s
+   después del final.
+
+5. collector-inaccesible.sh (02:48:46): otlp-collector a 0 réplicas durante 120 s.
+   Panel "Scrapes de Prometheus (up)": otlp-collector e infra-otlp en 0.
+   Collector OTLP inaccesible: Pending t+18 s, Firing t+45 s, Normal 23 s después del final.
+   Efectos esperados: sin collector no llegan métricas de infraestructura, y las alertas que
+   dependen de ellas quedan en NoData hasta que vuelve. Al volver saltan "Contenedor
+   reiniciado o reemplazado" (pod nuevo del collector, ~2 min) y "Memoria del pod cerca de
+   su límite" durante 12 s: el infra-collector llegó a 90 % de su límite acumulando
+   reintentos mientras el collector estaba caído.
+   (Primera corrida, 02:38:33: "Servicio de la app sin endpoints listos" también saltaba
+   porque faltaban los datos de kube-state-metrics; la regla se ajustó para no hacerlo con
+   el collector caído, y esta segunda corrida lo verifica.)
+
+6. cpu-elevada.sh (02:56:48): un proceso por CPU visible durante 240 s.
+   Panel "CPU del nodo en % de la cuota de minikube": 95,9 % (umbral 85).
+   CPU elevada del nodo: Pending t+114 s, Firing t+175 s, Normal 30 s después del final.
+
+7. disco-bajo.sh (03:05:09): ext4 de 128 MiB montado en el nodo y lleno al 89 %, 360 s.
+   Panel "Disco disponible del nodo": el montaje de prueba baja a 10,4 % (umbral 15).
+   Poco espacio disponible en disco: Pending t+24 s, Firing t+87 s, Normal 19 s después
+   del final. También salta "Contenedor reiniciado o reemplazado" (t+27 s a t+149 s),
+   porque el script reinicia node-exporter. El montaje se desarmó y la imagen se borró.
+
+8. memoria-elevada.sh (03:26:04): reserva RAM hasta el 88 % del límite de minikube.
+   El script reservó 2752 MiB (el nodo estaba en 55 % de 8192 MiB).
+   Panel "Memoria del nodo en % del límite de minikube": 88,3 % (umbral 85).
+   Memoria elevada del nodo: Pending t+33 s, Firing t+90 s.
+   Se cortó a t+143 s con --restore (vigía de memoria de Windows en 600 MB: la reserva
+   sale de la VM de WSL); volvió a Normal 27 s después.
+   Primera corrida (03:16:01): con la cuenta inicial (2414 MiB) el nodo quedó en 83,7 %,
+   porque cerca del límite el kernel libera caché de otros procesos. El script ahora
+   reserva de a 8 MiB releyendo el uso hasta llegar al 88 %.
+
+Resultado: las 8 alertas pasaron a Firing con su script y volvieron a Normal. Los pods de
+prueba (caos-alerta-*) no dispararon "Contenedor reiniciado o reemplazado". Después de cada
+script: sin pods caos-alerta-*, selector de users restaurado y collector con 1 réplica.
