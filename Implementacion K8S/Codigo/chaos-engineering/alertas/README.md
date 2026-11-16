@@ -96,7 +96,7 @@ bash memoria-elevada.sh
 bash memoria-elevada.sh --restore
 ```
 
-**Qué provoca:** lee el cgroup del nodo (el contenedor de minikube) y calcula cuánta RAM falta para llegar a 88% de su límite (`--memory`), la misma base que la alerta. La reserva por 180 segundos. Por defecto permite como máximo **4096 MiB adicionales**; si hace falta más, informa cuánto y sale sin reservar. Podés pasar otro máximo, por ejemplo `bash memoria-elevada.sh 2048`. El script libera la RAM si el nodo pasa el 92% de su límite. El pod no tiene requests ni limits: si falta memoria, el kernel lo mata primero a él.
+**Qué provoca:** lee el cgroup del nodo (el contenedor de minikube) y reserva RAM de a 8 MiB, releyendo el uso, hasta llegar a 88% de su límite (`--memory`), la misma base que la alerta. Cerca del límite el kernel libera caché de otros procesos, así que hace falta reservar más de lo que indica la primera cuenta. La mantiene 180 segundos. Por defecto permite como máximo **4096 MiB adicionales**; si hace falta más, informa cuánto y sale sin reservar. Podés pasar otro máximo, por ejemplo `bash memoria-elevada.sh 2048`. El script libera la RAM si el nodo pasa el 92% de su límite. El pod no tiene requests ni limits: si falta memoria, el kernel lo mata primero a él.
 
 En Windows y macOS, la memoria que reserva sale de la VM de Docker: medí la memoria disponible del equipo antes de correrlo.
 
@@ -359,7 +359,7 @@ unless on (namespace, endpoint) kube_endpoint_address{ready="true"}
 count by (endpoint) (kube_endpoint_address{namespace="pharmago", ready="true"})
 ```
 
-Vienen de kube-state-metrics (recurso `endpoints`). La regla también salta si no llegan datos de kube-state-metrics: sin ellos no se puede confirmar que haya endpoints.
+Vienen de kube-state-metrics (recurso `endpoints`). La regla también salta si no llegan datos de kube-state-metrics (salvo con el otlp-collector caído, que tiene su propia alerta): sin ellos no se puede confirmar que haya endpoints.
 
 **Kibana — consecuencias en Gateway o dependencias:**
 

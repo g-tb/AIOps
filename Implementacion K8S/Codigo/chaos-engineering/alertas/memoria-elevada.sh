@@ -71,19 +71,30 @@ if necesario > maximo:
 def seguro():
     return estado()[0] < limite * 0.92
 
+# Se reserva de a 8 MiB releyendo el cgroup: cerca del limite el kernel libera cache de
+# otros procesos, y el uso total sube menos que lo reservado (medido: 2414 MiB dejaron
+# el nodo en 84 %, no en 88 %).
 bloques = []
-try:
-    while necesario > 0:
+reservado = 0
+def completar(objetivo):
+    global reservado
+    while estado()[0] < limite * objetivo and reservado + 8 * MIB <= maximo:
         if not seguro():
             sys.exit("Se detiene: el nodo supera el 92 % de su limite.")
-        cantidad = min(necesario, 8 * MIB)
-        bloques.append(bytearray(b"\x01") * cantidad)  # escribe cada pagina: RAM real
-        necesario -= cantidad
+        bloques.append(bytearray(b"\x01") * (8 * MIB))  # escribe cada pagina: RAM real
+        reservado += 8 * MIB
         time.sleep(0.05)
-    print("RAM reservada por 180 segundos", flush=True)
+
+try:
+    completar(0.88)
+    uso = estado()[0]
+    print(f"Reservados {reservado // MIB} MiB; nodo en {100 * uso / limite:.0f} %. Se mantiene 180 segundos", flush=True)
+    if uso < limite * 0.86:
+        print("Aviso: el maximo no alcanzo para pasar el 85 %; la alerta puede no dispararse.", flush=True)
     for _ in range(180):
         if not seguro():
             sys.exit("Se libera la memoria: el nodo supero el 92 % de su limite.")
+        completar(0.87)
         time.sleep(1)
 finally:
     bloques.clear()
