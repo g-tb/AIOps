@@ -68,7 +68,6 @@ builder.Services.AddOpenTelemetry()
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddMeter("PharmaGo.CustomMetrics")
-            .AddPrometheusExporter()
             .AddOtlpExporter(options =>
             {
                 options.Endpoint = new Uri("http://otlp-collector:4317");
@@ -122,7 +121,6 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.MapReverseProxy();
-app.MapPrometheusScrapingEndpoint();
 
 app.Run();
 

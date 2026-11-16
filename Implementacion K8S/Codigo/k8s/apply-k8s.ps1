@@ -135,6 +135,8 @@ kubectl apply -f deployments\ops\prometheus-deployment.yaml
 kubectl apply -f services\ops\node-exporter-service.yaml
 kubectl apply -f deployments\ops\node-exporter-daemonset.yaml
 kubectl apply -f deployments/ops/infra-collector-deployment.yaml
+kubectl apply -f services\ops\kube-state-metrics-service.yaml
+kubectl apply -f deployments\ops\kube-state-metrics-deployment.yaml
 
 kubectl apply -f services\ops\grafana-service.yaml
 kubectl apply -f deployments\ops\grafana-deployment.yaml

@@ -14,7 +14,7 @@ namespace PharmaGo.UsersService.Factory
             services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
     .SetResourceBuilder(
-        ResourceBuilder.CreateDefault().AddService(serviceName))
+        ResourceBuilder.CreateDefault().AddService(serviceName, serviceInstanceId: Environment.MachineName))
     .SetSampler(new ParentBasedSampler(new AlwaysOnSampler()))
     .AddAspNetCoreInstrumentation()
     .AddHttpClientInstrumentation()
@@ -24,11 +24,10 @@ namespace PharmaGo.UsersService.Factory
         options.Protocol = OtlpExportProtocol.Grpc;
     }))
                     .WithMetrics(metricsBuilder => { metricsBuilder
-                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName, serviceInstanceId: Environment.MachineName))
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddMeter("PharmaGo.CustomMetrics")
-                    .AddPrometheusExporter()
                     .AddOtlpExporter(options =>
                         {
                             options.Endpoint = new Uri("http://otlp-collector:4317");
