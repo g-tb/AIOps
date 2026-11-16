@@ -46,7 +46,7 @@ Tiempos de alerta: estado leído de la API de Grafana cada 3 s (reglas evaluadas
    cerró en el primer half-open, a los 30 s. El connect timeout aparece en los logs como
    "Retry scheduled ... LastError=TaskCanceledException" y responde 503, no 500.
 
-6. Interrupción de red: no hay script (R2). La fila muestra red por pod y 5xx.
+6. Interrupción de red: todavía no había script. La fila muestra red por pod y 5xx.
 
 Carga del dashboard: las 20 queries de una pasada de refresh, con rango de 15 min,
 respondieron en 1,1 s (6 en paralelo, por la API de Grafana).
